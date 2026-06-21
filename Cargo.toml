@@ -40,6 +40,10 @@ url = "2"
 # keyboard/scroll input. A thin cross-platform framebuffer — no GUI toolkit.
 minifb = "0.27"
 
+# Used only by `examples/make_gif.rs` to encode the demo animation.
+[dev-dependencies]
+gif = "0.13"
+
 [profile.release]
 opt-level = 3
 lto = "thin"
