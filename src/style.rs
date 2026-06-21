@@ -113,6 +113,11 @@ fn specified_values(
 ) -> PropertyMap {
     let mut values: PropertyMap = inherited.clone();
 
+    // Presentational attributes (bgcolor, width, height) are old HTML's way of
+    // carrying style. Browsers map them to low-priority CSS so author rules can
+    // still override them. Hacker News's orange bar is a `bgcolor` attribute.
+    apply_presentational_hints(elem, &mut values);
+
     // Gather (specificity, rule) for every matching rule, UA before author so
     // author rules win ties. A stable sort then keeps that source order.
     let mut matches: Vec<(Specificity, &Rule)> = Vec::new();
@@ -137,6 +142,38 @@ fn specified_values(
     }
 
     values
+}
+
+/// Map a few legacy presentational attributes onto CSS properties.
+fn apply_presentational_hints(elem: &ElementData, values: &mut PropertyMap) {
+    let mut set = |prop: &str, raw: &str| {
+        for decl in css::parse_declarations(&format!("{prop}: {raw}")) {
+            values.insert(decl.name, decl.value);
+        }
+    };
+    if let Some(bg) = elem.get_attribute("bgcolor") {
+        set("background-color", &normalize_color(bg));
+    }
+    if let Some(w) = elem.get_attribute("width") {
+        set("width", w);
+    }
+    if let Some(h) = elem.get_attribute("height") {
+        set("height", h);
+    }
+}
+
+/// `bgcolor="ff6600"` (no `#`) is valid in old HTML; CSS needs the hash.
+fn normalize_color(raw: &str) -> String {
+    let t = raw.trim();
+    let is_bare_hex = !t.is_empty()
+        && !t.starts_with('#')
+        && t.len() <= 6
+        && t.chars().all(|c| c.is_ascii_hexdigit());
+    if is_bare_hex {
+        format!("#{t}")
+    } else {
+        t.to_string()
+    }
 }
 
 /// If any selector in the rule matches the element, return the best specificity.
@@ -331,6 +368,26 @@ mod tests {
         assert_eq!(find_tag(&styled, "div").unwrap().display(), Display::Block);
         assert_eq!(find_tag(&styled, "span").unwrap().display(), Display::Inline);
         assert_eq!(find_tag(&styled, "script").unwrap().display(), Display::None);
+    }
+
+    #[test]
+    fn presentational_attributes_become_styles() {
+        let dom = html::parse("<table bgcolor=#ff6600 width=85%><tr><td>x</td></tr></table>");
+        let styled = style_tree(&dom, &css::parse(""));
+        let table = find_tag(&styled, "table").unwrap();
+        assert_eq!(
+            table.value("background-color"),
+            Some(Value::ColorValue(css::Color::rgb(255, 102, 0)))
+        );
+        assert_eq!(table.value("width"), Some(Value::Length(85.0, css::Unit::Percent)));
+    }
+
+    #[test]
+    fn author_css_overrides_presentational_attribute() {
+        let dom = html::parse("<td bgcolor=red>x</td>");
+        let styled = style_tree(&dom, &css::parse("td { background-color: green; }"));
+        let td = find_tag(&styled, "td").unwrap();
+        assert_eq!(td.value("background-color"), Some(Value::ColorValue(css::Color::rgb(0, 128, 0))));
     }
 
     #[test]
