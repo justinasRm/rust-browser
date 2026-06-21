@@ -65,6 +65,9 @@ pub enum Unit {
     Rem,
     Pt,
     Percent,
+    /// Viewport width / height percentages (`1vw` = 1% of the viewport width).
+    Vw,
+    Vh,
 }
 
 /// An 8-bit-per-channel RGBA color.
@@ -315,6 +318,8 @@ impl<'a> Parser<'a> {
             "rem" => Unit::Rem,
             "pt" => Unit::Pt,
             "%" => Unit::Percent,
+            "vw" => Unit::Vw,
+            "vh" => Unit::Vh,
             // Unknown unit: treat as px so we degrade gracefully.
             _ => Unit::Px,
         };

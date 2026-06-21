@@ -226,8 +226,7 @@ impl<'a> LayoutBox<'a> {
         let zero = Length(0.0);
 
         let mut width = style
-            .and_then(|s| length_px(s, "width"))
-            .map(Length)
+            .map(|s| resolve_width(s, containing_block.content.width))
             .unwrap_or(Auto);
 
         let margin_left = lookup_len(style, &["margin-left", "margin"], &zero);
@@ -567,6 +566,23 @@ impl LengthOrAuto {
     }
 }
 
+/// Resolve the `width` property against the containing block.
+///
+/// Absolute units become pixels; `%` and `vw` are taken as a fraction of the
+/// container's width (for top-level boxes the container *is* the viewport, so
+/// `vw` is exact; nested `vw` is approximated, which is fine for our pages).
+/// Everything else — `auto`, `vh`, a missing value — means "auto".
+fn resolve_width(style: &StyledNode, cb_width: f32) -> LengthOrAuto {
+    use crate::css::{Unit, Value};
+    match style.value("width") {
+        Some(Value::Length(n, Unit::Percent)) | Some(Value::Length(n, Unit::Vw)) => {
+            Length(n / 100.0 * cb_width)
+        }
+        Some(v @ Value::Length(..)) => Length(v.to_px()),
+        _ => Auto,
+    }
+}
+
 /// Read a px length property directly off a styled node.
 fn length_px(style: &StyledNode, name: &str) -> Option<f32> {
     match style.value(name) {
@@ -651,6 +667,14 @@ mod tests {
         );
         // (800-400)/2 == 200 left offset.
         assert!(dump.contains("@ (200,0) 400x10"), "got: {dump}");
+    }
+
+    #[test]
+    fn percentage_and_viewport_widths_resolve() {
+        let half = layout("<div></div>", "div { width: 50%; height: 10px; }", 800.0);
+        assert!(half.contains("400x10"), "got: {half}");
+        let vw = layout("<div></div>", "div { width: 60vw; height: 10px; }", 1000.0);
+        assert!(vw.contains("600x10"), "got: {vw}");
     }
 
     #[test]
