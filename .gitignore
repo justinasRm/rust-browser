@@ -1,0 +1,14 @@
+# Rust build artifacts
+/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# Rendered output produced by running the browser
+/out
+*.local.png
+
+# Editor / OS noise
+.DS_Store
+.idea
+.vscode
+*.swp

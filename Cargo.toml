@@ -1,0 +1,32 @@
+[package]
+name = "robin"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+description = "A tiny web browser engine you build from scratch in Rust, one commit at a time."
+license = "MIT"
+repository = "https://github.com/addyosmani/rust-browser"
+readme = "README.md"
+keywords = ["browser", "engine", "html", "css", "tutorial"]
+categories = ["web-programming", "rendering"]
+
+# The engine is split into a library (`robin`) plus a thin CLI (`src/main.rs`).
+# Keeping the logic in the library is what makes the project easy to test and
+# easy for a coding agent to navigate.
+[lib]
+name = "robin"
+path = "src/lib.rs"
+
+[[bin]]
+name = "robin"
+path = "src/main.rs"
+
+# Dependencies are intentionally added *commit by commit*, exactly when the
+# tutorial first needs them. The DOM, HTML, CSS, style and layout stages use
+# nothing but the standard library. Painting, text, networking and the
+# interactive window each pull in one focused crate.
+[dependencies]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
