@@ -182,16 +182,17 @@ impl<'a> Parser<'a> {
                 }
                 '\0' => break,
                 _ => {
-                    if let Some(sel) = self.parse_simple_selector() {
-                        selectors.push(Selector::Simple(sel));
-                    } else {
-                        // Unparseable selector (e.g. a combinator we don't
-                        // support): bail on this rule to stay in sync.
-                        self.skip_until_any(&['{', ',']);
-                        if self.next_char() == '{' {
-                            self.pos += 1;
-                            break;
-                        }
+                    let parsed = self.parse_simple_selector();
+                    self.skip_ws_and_comments();
+                    // A simple selector is only valid here if the next thing is a
+                    // comma or the start of the declaration block. Anything else
+                    // means a combinator/compound/pseudo we don't model
+                    // (`a b`, `a > b`, `a:hover`, `a[x]`) — drop the whole
+                    // selector so we never *mis*-apply it. (Matching nothing is
+                    // safer than matching the wrong elements.)
+                    match (parsed, self.next_char()) {
+                        (Some(sel), ',' | '{' | '\0') => selectors.push(Selector::Simple(sel)),
+                        _ => self.skip_until_any(&['{', ',']),
                     }
                 }
             }
@@ -590,6 +591,41 @@ mod tests {
         // The valid rule still parses.
         assert!(ss.rules.iter().any(|r| r.declarations.iter().any(|d| d.name == "color"
             && d.value == Value::ColorValue(Color::rgb(255, 0, 0)))));
+    }
+
+    #[test]
+    fn unsupported_selectors_are_dropped_not_misread() {
+        // Descendant, child and pseudo selectors must NOT turn into a list of
+        // simple selectors (which would mis-style unrelated elements).
+        let ss = parse(".nav a { color: red } article > p { color: green } a:hover { color: blue }");
+        for rule in &ss.rules {
+            for sel in &rule.selectors {
+                let Selector::Simple(s) = sel;
+                // None of these should be a bare `a`, `p`, `.nav`, etc. that
+                // leaked out of a complex selector.
+                assert!(
+                    s.tag_name.is_none() || rule.selectors.len() == 1,
+                    "complex selector leaked into a list: {sel:?}"
+                );
+            }
+        }
+        // The bare `a` from `.nav a` must not match every <a>.
+        let a_only = Selector::Simple(SimpleSelector { tag_name: Some("a".into()), ..Default::default() });
+        assert!(!ss.rules.iter().any(|r| r.selectors.contains(&a_only)));
+    }
+
+    #[test]
+    fn compound_without_combinator_still_parses() {
+        // `a.story` (no space) is a single simple selector and must survive.
+        let ss = parse("a.story { color: red; } li, .item { color: blue; }");
+        assert_eq!(ss.rules.len(), 2);
+        let first = &ss.rules[0].selectors[0];
+        assert_eq!(*first, Selector::Simple(SimpleSelector {
+            tag_name: Some("a".into()),
+            classes: vec!["story".into()],
+            ..Default::default()
+        }));
+        assert_eq!(ss.rules[1].selectors.len(), 2); // li and .item
     }
 
     #[test]
