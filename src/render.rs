@@ -70,6 +70,16 @@ impl Canvas {
             .collect()
     }
 
+    /// A new canvas containing rows `[top, top + height)` of this one (clamped).
+    /// Used to screenshot a specific band of a tall page.
+    pub fn cropped(&self, top: usize, height: usize) -> Canvas {
+        let top = top.min(self.height);
+        let height = height.min(self.height - top).max(1);
+        let start = top * self.width;
+        let end = (top + height) * self.width;
+        Canvas { width: self.width, height, pixels: self.pixels[start..end].to_vec() }
+    }
+
     /// Save the canvas as a PNG file.
     pub fn save_png(&self, path: &str) -> Result<(), String> {
         image::save_buffer(

@@ -15,6 +15,8 @@ const DEFAULT_WIDTH: f32 = 1000.0;
 struct Options {
     target: String,
     width: f32,
+    clip_top: Option<f32>,
+    clip_height: Option<f32>,
     mode: Mode,
 }
 
@@ -90,7 +92,8 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Mode::Png(path) => {
-            let canvas = paint_page(&layout_root, &fonts, opts.width);
+            let full = paint_page(&layout_root, &fonts, opts.width);
+            let canvas = clip(full, opts.clip_top, opts.clip_height);
             ensure_parent_dir(&path);
             match canvas.save_png(&path) {
                 Ok(()) => {
@@ -104,6 +107,7 @@ fn main() -> ExitCode {
             }
         }
         Mode::Window => {
+            // The window scrolls, so it always shows the full page.
             let canvas = paint_page(&layout_root, &fonts, opts.width);
             let title = format!("robin — {}", opts.target);
             match robin::window::show(&canvas, &title) {
@@ -118,7 +122,7 @@ fn main() -> ExitCode {
     }
 }
 
-/// Paint the laid-out page into a (possibly very tall) canvas.
+/// Paint the laid-out page into a (possibly very tall) full-height canvas.
 fn paint_page(
     layout_root: &layout::LayoutBox,
     fonts: &robin::text::Fonts,
@@ -129,6 +133,19 @@ fn paint_page(
     let display_list = paint::build_display_list(layout_root);
     paint::paint_list(&mut canvas, &display_list, fonts);
     canvas
+}
+
+/// Crop the canvas to the `--clip-top` / `--clip-height` window, if given. Lets
+/// you screenshot just one band of a tall page.
+fn clip(canvas: render::Canvas, top: Option<f32>, height: Option<f32>) -> render::Canvas {
+    if top.is_none() && height.is_none() {
+        return canvas;
+    }
+    let top = top.unwrap_or(0.0).max(0.0) as usize;
+    let height = height
+        .map(|h| h.max(1.0) as usize)
+        .unwrap_or_else(|| canvas.height.saturating_sub(top));
+    canvas.cropped(top, height)
 }
 
 fn ensure_parent_dir(path: &str) {
@@ -142,6 +159,8 @@ fn ensure_parent_dir(path: &str) {
 fn parse_args(args: &[String]) -> Result<Options, String> {
     let mut target = None;
     let mut width = DEFAULT_WIDTH;
+    let mut clip_top = None;
+    let mut clip_height = None;
     let mut mode = None;
     let mut i = 0;
     while i < args.len() {
@@ -161,6 +180,22 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
                     .and_then(|w| w.parse().ok())
                     .ok_or("--width needs a number")?;
             }
+            "--clip-height" => {
+                i += 1;
+                clip_height = Some(
+                    args.get(i)
+                        .and_then(|h| h.parse().ok())
+                        .ok_or("--clip-height needs a number")?,
+                );
+            }
+            "--clip-top" => {
+                i += 1;
+                clip_top = Some(
+                    args.get(i)
+                        .and_then(|t| t.parse().ok())
+                        .ok_or("--clip-top needs a number")?,
+                );
+            }
             other if other.starts_with('-') => return Err(format!("unknown option {other}")),
             other => target = Some(other.to_string()),
         }
@@ -169,7 +204,7 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
     let target = target.ok_or("no URL or file given")?;
     // Default to a PNG next to the target if no mode was chosen.
     let mode = mode.unwrap_or_else(|| Mode::Png("out/page.png".to_string()));
-    Ok(Options { target, width, mode })
+    Ok(Options { target, width, clip_top, clip_height, mode })
 }
 
 fn print_usage() {
@@ -183,6 +218,8 @@ fn print_usage() {
              --window         Open an interactive, scrollable window\n    \
              --png <FILE>     Render the page to a PNG (default: out/page.png)\n    \
              --width <PX>     Viewport width in pixels (default: {})\n    \
+             --clip-top <PX>  Skip the top PX pixels when saving (scroll offset)\n    \
+             --clip-height <PX>  Cap the rendered height (for thumbnails)\n    \
              --dump-dom       Print the parsed DOM tree and exit\n    \
              --dump-layout    Print the layout (box) tree and exit\n    \
              -h, --help       Show this help\n    \
