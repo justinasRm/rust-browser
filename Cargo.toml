@@ -36,6 +36,9 @@ fontdue = "0.9"
 # live pages, plus URL parsing to resolve relative links like <link href>.
 ureq = { version = "2", features = ["tls", "gzip"] }
 url = "2"
+# Interactive window: open a real OS window and push our pixel buffer to it, with
+# keyboard/scroll input. A thin cross-platform framebuffer — no GUI toolkit.
+minifb = "0.27"
 
 [profile.release]
 opt-level = 3

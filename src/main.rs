@@ -22,6 +22,7 @@ enum Mode {
     DumpDom,
     DumpLayout,
     Png(String),
+    Window,
 }
 
 fn main() -> ExitCode {
@@ -88,33 +89,46 @@ fn main() -> ExitCode {
             print!("{}", layout::box_tree_to_string(&layout_root));
             ExitCode::SUCCESS
         }
-        Mode::Png(path) => match render_png(&layout_root, &fonts, opts.width, &path) {
-            Ok(()) => {
-                println!("robin: wrote {path}");
-                ExitCode::SUCCESS
+        Mode::Png(path) => {
+            let canvas = paint_page(&layout_root, &fonts, opts.width);
+            ensure_parent_dir(&path);
+            match canvas.save_png(&path) {
+                Ok(()) => {
+                    println!("robin: wrote {path}");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("robin: failed to write {path}: {e}");
+                    ExitCode::FAILURE
+                }
             }
-            Err(e) => {
-                eprintln!("robin: failed to write {path}: {e}");
-                ExitCode::FAILURE
+        }
+        Mode::Window => {
+            let canvas = paint_page(&layout_root, &fonts, opts.width);
+            let title = format!("robin — {}", opts.target);
+            match robin::window::show(&canvas, &title) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(e) => {
+                    eprintln!("robin: window error: {e}");
+                    ExitCode::FAILURE
+                }
             }
-        },
+        }
         Mode::DumpDom => unreachable!(),
     }
 }
 
-/// Paint the layout tree to a canvas and save it as a PNG.
-fn render_png(
+/// Paint the laid-out page into a (possibly very tall) canvas.
+fn paint_page(
     layout_root: &layout::LayoutBox,
     fonts: &robin::text::Fonts,
     width: f32,
-    path: &str,
-) -> Result<(), String> {
+) -> render::Canvas {
     let height = layout_root.dimensions.margin_box().height.ceil().max(1.0);
     let mut canvas = render::Canvas::new(width as usize, height as usize, Color::rgb(255, 255, 255));
     let display_list = paint::build_display_list(layout_root);
     paint::paint_list(&mut canvas, &display_list, fonts);
-    ensure_parent_dir(path);
-    canvas.save_png(path)
+    canvas
 }
 
 fn ensure_parent_dir(path: &str) {
@@ -134,6 +148,7 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
         match args[i].as_str() {
             "--dump-dom" => mode = Some(Mode::DumpDom),
             "--dump-layout" => mode = Some(Mode::DumpLayout),
+            "--window" => mode = Some(Mode::Window),
             "--png" => {
                 i += 1;
                 let path = args.get(i).ok_or("--png needs an output file path")?;
@@ -165,6 +180,7 @@ fn print_usage() {
              robin <URL|FILE> [options]\n\
          \n\
          OPTIONS:\n    \
+             --window         Open an interactive, scrollable window\n    \
              --png <FILE>     Render the page to a PNG (default: out/page.png)\n    \
              --width <PX>     Viewport width in pixels (default: {})\n    \
              --dump-dom       Print the parsed DOM tree and exit\n    \
@@ -173,7 +189,8 @@ fn print_usage() {
              -V, --version    Show the version\n\
          \n\
          <URL|FILE> may be an https:// URL, a file:// URL, or a local path.\n\
-         An interactive --window is added in the next commit. See docs/.",
+         In the window: arrows/j/k scroll, Space/PageDn page, Home/End jump,\n\
+         q or Esc quits. See docs/ for the matching chapters.",
         robin::VERSION, DEFAULT_WIDTH as u32
     );
 }
