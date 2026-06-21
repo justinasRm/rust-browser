@@ -100,7 +100,11 @@ fn style_node<'a>(
         .map(|child| style_node(child, ua, author, &to_inherit))
         .collect();
 
-    StyledNode { node, specified_values: specified, children }
+    StyledNode {
+        node,
+        specified_values: specified,
+        children,
+    }
 }
 
 /// Resolve one element's properties: inherited values first, then matched rules
@@ -203,7 +207,11 @@ fn matches_simple(elem: &ElementData, selector: &SimpleSelector) -> bool {
     }
     // Every class in the selector must be on the element.
     let elem_classes = elem.classes();
-    if selector.classes.iter().any(|c| !elem_classes.contains(c.as_str())) {
+    if selector
+        .classes
+        .iter()
+        .any(|c| !elem_classes.contains(c.as_str()))
+    {
         return false;
     }
     true
@@ -330,7 +338,10 @@ mod tests {
         let styled = style_tree(&dom, &sheet);
         // Walk to the <a>.
         let body_or_a = find_tag(&styled, "a").expect("an <a> in the tree");
-        assert_eq!(body_or_a.value("color"), Some(Value::ColorValue(css::Color::rgb(255, 0, 0))));
+        assert_eq!(
+            body_or_a.value("color"),
+            Some(Value::ColorValue(css::Color::rgb(255, 0, 0)))
+        );
     }
 
     #[test]
@@ -339,7 +350,10 @@ mod tests {
         let sheet = css::parse("p { color: red; } .intro { color: green; } #lead { color: blue; }");
         let styled = style_tree(&dom, &sheet);
         let p = find_tag(&styled, "p").unwrap();
-        assert_eq!(p.value("color"), Some(Value::ColorValue(css::Color::rgb(0, 0, 255))));
+        assert_eq!(
+            p.value("color"),
+            Some(Value::ColorValue(css::Color::rgb(0, 0, 255)))
+        );
     }
 
     #[test]
@@ -348,7 +362,10 @@ mod tests {
         let sheet = css::parse("#lead { color: blue; }");
         let styled = style_tree(&dom, &sheet);
         let p = find_tag(&styled, "p").unwrap();
-        assert_eq!(p.value("color"), Some(Value::ColorValue(css::Color::rgb(255, 165, 0))));
+        assert_eq!(
+            p.value("color"),
+            Some(Value::ColorValue(css::Color::rgb(255, 165, 0)))
+        );
     }
 
     #[test]
@@ -357,7 +374,10 @@ mod tests {
         let sheet = css::parse("");
         let styled = style_tree(&dom, &sheet);
         let span = find_tag(&styled, "span").unwrap();
-        assert_eq!(span.value("color"), Some(Value::ColorValue(css::Color::rgb(0, 128, 0))));
+        assert_eq!(
+            span.value("color"),
+            Some(Value::ColorValue(css::Color::rgb(0, 128, 0)))
+        );
     }
 
     #[test]
@@ -366,8 +386,14 @@ mod tests {
         let sheet = css::parse("");
         let styled = style_tree(&dom, &sheet);
         assert_eq!(find_tag(&styled, "div").unwrap().display(), Display::Block);
-        assert_eq!(find_tag(&styled, "span").unwrap().display(), Display::Inline);
-        assert_eq!(find_tag(&styled, "script").unwrap().display(), Display::None);
+        assert_eq!(
+            find_tag(&styled, "span").unwrap().display(),
+            Display::Inline
+        );
+        assert_eq!(
+            find_tag(&styled, "script").unwrap().display(),
+            Display::None
+        );
     }
 
     #[test]
@@ -379,7 +405,10 @@ mod tests {
             table.value("background-color"),
             Some(Value::ColorValue(css::Color::rgb(255, 102, 0)))
         );
-        assert_eq!(table.value("width"), Some(Value::Length(85.0, css::Unit::Percent)));
+        assert_eq!(
+            table.value("width"),
+            Some(Value::Length(85.0, css::Unit::Percent))
+        );
     }
 
     #[test]
@@ -387,7 +416,10 @@ mod tests {
         let dom = html::parse("<td bgcolor=red>x</td>");
         let styled = style_tree(&dom, &css::parse("td { background-color: green; }"));
         let td = find_tag(&styled, "td").unwrap();
-        assert_eq!(td.value("background-color"), Some(Value::ColorValue(css::Color::rgb(0, 128, 0))));
+        assert_eq!(
+            td.value("background-color"),
+            Some(Value::ColorValue(css::Color::rgb(0, 128, 0)))
+        );
     }
 
     #[test]

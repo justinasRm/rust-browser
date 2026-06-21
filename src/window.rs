@@ -20,7 +20,7 @@ pub fn show(canvas: &Canvas, title: &str) -> Result<(), String> {
     let view_w = canvas.width;
     // The visible height is capped so the window fits on screen even for a very
     // tall page.
-    let view_h = canvas.height.min(800).max(1);
+    let view_h = canvas.height.clamp(1, 800);
 
     let mut window = Window::new(
         title,

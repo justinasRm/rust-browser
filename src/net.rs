@@ -31,11 +31,17 @@ const USER_AGENT: &str =
 pub fn load(target: &str) -> Result<Resource, String> {
     if is_http(target) {
         let body = fetch_text(target)?;
-        Ok(Resource { body, base_url: Some(target.to_string()) })
+        Ok(Resource {
+            body,
+            base_url: Some(target.to_string()),
+        })
     } else {
         let path = target.strip_prefix("file://").unwrap_or(target);
         let body = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-        Ok(Resource { body, base_url: None })
+        Ok(Resource {
+            body,
+            base_url: None,
+        })
     }
 }
 
@@ -92,7 +98,10 @@ fn collect_stylesheet_hrefs(node: &Node, out: &mut Vec<String>) {
         if el.tag_name == "link" {
             let is_stylesheet = el
                 .get_attribute("rel")
-                .map(|rel| rel.split_whitespace().any(|r| r.eq_ignore_ascii_case("stylesheet")))
+                .map(|rel| {
+                    rel.split_whitespace()
+                        .any(|r| r.eq_ignore_ascii_case("stylesheet"))
+                })
                 .unwrap_or(false);
             if is_stylesheet {
                 if let Some(href) = el.get_attribute("href") {

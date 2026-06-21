@@ -32,8 +32,8 @@ pub fn parse(source: &str) -> Node {
 
 // Elements that never have children or a closing tag.
 const VOID_ELEMENTS: &[&str] = &[
-    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
-    "param", "source", "track", "wbr",
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+    "track", "wbr",
 ];
 
 // Elements whose content is raw text, not markup. We read their body verbatim
@@ -56,7 +56,9 @@ struct TreeBuilder {
 impl TreeBuilder {
     fn new() -> Self {
         // The synthetic root collects everything; finish() unwraps it.
-        TreeBuilder { stack: vec![dom::elem("#document", AttrMap::new(), Vec::new())] }
+        TreeBuilder {
+            stack: vec![dom::elem("#document", AttrMap::new(), Vec::new())],
+        }
     }
 
     fn open_tag(&mut self, tag: &str, attrs: AttrMap) {
@@ -97,7 +99,11 @@ impl TreeBuilder {
 
     /// Attach a finished node to the current open element.
     fn append(&mut self, node: Node) {
-        self.stack.last_mut().expect("root is always present").children.push(node);
+        self.stack
+            .last_mut()
+            .expect("root is always present")
+            .children
+            .push(node);
     }
 
     /// HTML lets you omit many closing tags. When a new tag opens, close any
@@ -105,7 +111,9 @@ impl TreeBuilder {
     /// `<li>a<li>b` and table markup without `</td>` parse correctly.
     fn apply_implied_end_tags(&mut self, opening: &str) {
         loop {
-            let Some(current) = self.stack.last().and_then(Node::tag_name) else { return };
+            let Some(current) = self.stack.last().and_then(Node::tag_name) else {
+                return;
+            };
             let should_close = match opening {
                 "li" => current == "li",
                 "dt" | "dd" => current == "dt" || current == "dd",
@@ -117,8 +125,8 @@ impl TreeBuilder {
                 }
                 // Block-level elements close an open paragraph.
                 "p" | "div" | "ul" | "ol" | "table" | "blockquote" | "pre" | "section"
-                | "article" | "header" | "footer" | "nav" | "aside" | "form" | "hr"
-                | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => current == "p",
+                | "article" | "header" | "footer" | "nav" | "aside" | "form" | "hr" | "h1"
+                | "h2" | "h3" | "h4" | "h5" | "h6" => current == "p",
                 _ => false,
             };
             if should_close && self.stack.len() > 1 {
@@ -164,7 +172,12 @@ struct Tokenizer<'a, 'b> {
 
 impl<'a, 'b> Tokenizer<'a, 'b> {
     fn new(source: &'a str, builder: &'b mut TreeBuilder) -> Self {
-        Tokenizer { input: source.as_bytes(), chars: source, pos: 0, builder }
+        Tokenizer {
+            input: source.as_bytes(),
+            chars: source,
+            pos: 0,
+            builder,
+        }
     }
 
     fn run(&mut self) {

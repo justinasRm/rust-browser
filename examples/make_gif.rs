@@ -28,7 +28,10 @@ fn main() {
 
     let canvas = render_page(input, width as f32);
     write_scrolling_gif(&canvas, out, view_h);
-    println!("make_gif: wrote {out} ({}x{} page)", canvas.width, canvas.height);
+    println!(
+        "make_gif: wrote {out} ({}x{} page)",
+        canvas.width, canvas.height
+    );
 }
 
 /// Run the normal pipeline on a local page and return the full painted canvas.
@@ -39,13 +42,24 @@ fn render_page(input: &str, width: f32) -> Canvas {
     let styled = style::style_tree(&dom, &author);
     let fonts = text::Fonts::bundled().expect("fonts");
 
-    let viewport =
-        Dimensions { content: Rect { x: 0.0, y: 0.0, width, height: 0.0 }, ..Default::default() };
+    let viewport = Dimensions {
+        content: Rect {
+            x: 0.0,
+            y: 0.0,
+            width,
+            height: 0.0,
+        },
+        ..Default::default()
+    };
     let layout_root = layout::layout_tree(&styled, viewport, &fonts);
 
     let height = layout_root.dimensions.margin_box().height.ceil().max(1.0);
     let mut canvas = Canvas::new(width as usize, height as usize, Color::rgb(255, 255, 255));
-    paint::paint_list(&mut canvas, &paint::build_display_list(&layout_root), &fonts);
+    paint::paint_list(
+        &mut canvas,
+        &paint::build_display_list(&layout_root),
+        &fonts,
+    );
     canvas
 }
 
@@ -80,7 +94,11 @@ fn write_scrolling_gif(canvas: &Canvas, out: &str, view_h: usize) {
         let mut rgba = slice_rgba(canvas, scroll, view_h);
         let mut frame = gif::Frame::from_rgba_speed(w as u16, view_h as u16, &mut rgba, 10);
         // Longer pause on the hold frames at each end.
-        frame.delay = if i < holds_top || i >= offsets.len() - holds_bottom { 13 } else { 7 };
+        frame.delay = if i < holds_top || i >= offsets.len() - holds_bottom {
+            13
+        } else {
+            7
+        };
         encoder.write_frame(&frame).expect("write frame");
     }
 }

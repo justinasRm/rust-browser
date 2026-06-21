@@ -74,59 +74,81 @@ fn render_text(list: &mut Vec<DisplayCommand>, layout_box: &LayoutBox) {
 /// Draw a bullet for `display: list-item` boxes. We use a small filled square
 /// (no font baseline math needed) sitting in the list's padding.
 fn render_list_marker(list: &mut Vec<DisplayCommand>, layout_box: &LayoutBox) {
-    let Some(style) = layout_box.styled_node() else { return };
+    let Some(style) = layout_box.styled_node() else {
+        return;
+    };
     if style.display() != crate::style::Display::ListItem {
         return;
     }
     let content = layout_box.dimensions.content;
     let color = color_property(style, &["color"]).unwrap_or(Color::rgb(0, 0, 0));
-    list.push(DisplayCommand::SolidColor(color, Rect {
-        x: content.x - 14.0,
-        y: content.y + 7.0,
-        width: 5.0,
-        height: 5.0,
-    }));
+    list.push(DisplayCommand::SolidColor(
+        color,
+        Rect {
+            x: content.x - 14.0,
+            y: content.y + 7.0,
+            width: 5.0,
+            height: 5.0,
+        },
+    ));
 }
 
 fn render_background(list: &mut Vec<DisplayCommand>, layout_box: &LayoutBox) {
     if let Some(color) = background_color(layout_box) {
-        list.push(DisplayCommand::SolidColor(color, layout_box.dimensions.padding_box()));
+        list.push(DisplayCommand::SolidColor(
+            color,
+            layout_box.dimensions.padding_box(),
+        ));
     }
 }
 
 fn render_borders(list: &mut Vec<DisplayCommand>, layout_box: &LayoutBox) {
-    let Some(color) = border_color(layout_box) else { return };
+    let Some(color) = border_color(layout_box) else {
+        return;
+    };
     let d = &layout_box.dimensions;
     let border_box = d.border_box();
 
     // Left edge.
-    list.push(DisplayCommand::SolidColor(color, Rect {
-        x: border_box.x,
-        y: border_box.y,
-        width: d.border.left,
-        height: border_box.height,
-    }));
+    list.push(DisplayCommand::SolidColor(
+        color,
+        Rect {
+            x: border_box.x,
+            y: border_box.y,
+            width: d.border.left,
+            height: border_box.height,
+        },
+    ));
     // Right edge.
-    list.push(DisplayCommand::SolidColor(color, Rect {
-        x: border_box.x + border_box.width - d.border.right,
-        y: border_box.y,
-        width: d.border.right,
-        height: border_box.height,
-    }));
+    list.push(DisplayCommand::SolidColor(
+        color,
+        Rect {
+            x: border_box.x + border_box.width - d.border.right,
+            y: border_box.y,
+            width: d.border.right,
+            height: border_box.height,
+        },
+    ));
     // Top edge.
-    list.push(DisplayCommand::SolidColor(color, Rect {
-        x: border_box.x,
-        y: border_box.y,
-        width: border_box.width,
-        height: d.border.top,
-    }));
+    list.push(DisplayCommand::SolidColor(
+        color,
+        Rect {
+            x: border_box.x,
+            y: border_box.y,
+            width: border_box.width,
+            height: d.border.top,
+        },
+    ));
     // Bottom edge.
-    list.push(DisplayCommand::SolidColor(color, Rect {
-        x: border_box.x,
-        y: border_box.y + border_box.height - d.border.bottom,
-        width: border_box.width,
-        height: d.border.bottom,
-    }));
+    list.push(DisplayCommand::SolidColor(
+        color,
+        Rect {
+            x: border_box.x,
+            y: border_box.y + border_box.height - d.border.bottom,
+            width: border_box.width,
+            height: d.border.bottom,
+        },
+    ));
 }
 
 /// The element's background color, if it sets one.
@@ -179,7 +201,12 @@ mod tests {
         let sheet = css::parse(css_src);
         let styled = style::style_tree(&dom, &sheet);
         let viewport = Dimensions {
-            content: LRect { x: 0.0, y: 0.0, width: 200.0, height: 0.0 },
+            content: LRect {
+                x: 0.0,
+                y: 0.0,
+                width: 200.0,
+                height: 0.0,
+            },
             ..Default::default()
         };
         let fonts = crate::text::Fonts::bundled().unwrap();
@@ -190,8 +217,10 @@ mod tests {
     #[test]
     fn background_becomes_a_solid_rect() {
         let list = display_list("<div></div>", "div { height: 20px; background: #ff6600; }");
-        let has_orange = list.iter().any(|c| matches!(c,
-            DisplayCommand::SolidColor(col, _) if *col == css::Color::rgb(255, 102, 0)));
+        let has_orange = list.iter().any(|c| {
+            matches!(c,
+            DisplayCommand::SolidColor(col, _) if *col == css::Color::rgb(255, 102, 0))
+        });
         assert!(has_orange, "expected an orange background rect");
     }
 

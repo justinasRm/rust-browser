@@ -54,19 +54,28 @@ pub struct ElementData {
 
 /// Create a text node.
 pub fn text(data: impl Into<String>) -> Node {
-    Node { children: Vec::new(), node_type: NodeType::Text(data.into()) }
+    Node {
+        children: Vec::new(),
+        node_type: NodeType::Text(data.into()),
+    }
 }
 
 /// Create a comment node.
 pub fn comment(data: impl Into<String>) -> Node {
-    Node { children: Vec::new(), node_type: NodeType::Comment(data.into()) }
+    Node {
+        children: Vec::new(),
+        node_type: NodeType::Comment(data.into()),
+    }
 }
 
 /// Create an element node with the given tag, attributes and children.
 pub fn elem(tag_name: impl Into<String>, attributes: AttrMap, children: Vec<Node>) -> Node {
     Node {
         children,
-        node_type: NodeType::Element(ElementData { tag_name: tag_name.into(), attributes }),
+        node_type: NodeType::Element(ElementData {
+            tag_name: tag_name.into(),
+            attributes,
+        }),
     }
 }
 
@@ -151,12 +160,13 @@ fn print_node(node: &Node, depth: usize, out: &mut String) {
                 out.push_str(&format!("{indent}#text {:?}\n", truncate(trimmed, 60)));
             }
         }
-        NodeType::Comment(s) => out.push_str(&format!("{indent}<!-- {} -->\n", truncate(s.trim(), 40))),
+        NodeType::Comment(s) => {
+            out.push_str(&format!("{indent}<!-- {} -->\n", truncate(s.trim(), 40)))
+        }
         NodeType::Element(e) => {
             let mut attrs: Vec<_> = e.attributes.iter().collect();
             attrs.sort_by(|a, b| a.0.cmp(b.0)); // stable output for tests
-            let attr_str: String =
-                attrs.iter().map(|(k, v)| format!(" {k}=\"{v}\"")).collect();
+            let attr_str: String = attrs.iter().map(|(k, v)| format!(" {k}=\"{v}\"")).collect();
             out.push_str(&format!("{indent}<{}{}>\n", e.tag_name, attr_str));
         }
     }
@@ -179,7 +189,10 @@ mod tests {
     use super::*;
 
     fn attrs(pairs: &[(&str, &str)]) -> AttrMap {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     #[test]
@@ -196,7 +209,11 @@ mod tests {
         let tree = elem(
             "p",
             AttrMap::new(),
-            vec![text("Hello, "), elem("b", AttrMap::new(), vec![text("world")]), text("!")],
+            vec![
+                text("Hello, "),
+                elem("b", AttrMap::new(), vec![text("world")]),
+                text("!"),
+            ],
         );
         assert_eq!(tree.inner_text(), "Hello, world!");
     }

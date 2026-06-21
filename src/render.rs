@@ -21,7 +21,11 @@ pub struct Canvas {
 impl Canvas {
     /// A new canvas filled with a solid background color (usually white).
     pub fn new(width: usize, height: usize, background: Color) -> Canvas {
-        Canvas { width, height, pixels: vec![background; width * height] }
+        Canvas {
+            width,
+            height,
+            pixels: vec![background; width * height],
+        }
     }
 
     /// Fill a rectangle with a color, clipped to the canvas and alpha-blended
@@ -77,7 +81,11 @@ impl Canvas {
         let height = height.min(self.height - top).max(1);
         let start = top * self.width;
         let end = (top + height) * self.width;
-        Canvas { width: self.width, height, pixels: self.pixels[start..end].to_vec() }
+        Canvas {
+            width: self.width,
+            height,
+            pixels: self.pixels[start..end].to_vec(),
+        }
     }
 
     /// Save the canvas as a PNG file.
@@ -117,7 +125,15 @@ mod tests {
     fn fill_is_clipped_to_bounds() {
         let mut c = Canvas::new(4, 4, Color::rgb(255, 255, 255));
         // Rect partly off the right/bottom edge shouldn't panic.
-        c.fill_rect(Rect { x: 2.0, y: 2.0, width: 10.0, height: 10.0 }, Color::rgb(0, 0, 0));
+        c.fill_rect(
+            Rect {
+                x: 2.0,
+                y: 2.0,
+                width: 10.0,
+                height: 10.0,
+            },
+            Color::rgb(0, 0, 0),
+        );
         assert_eq!(c.pixels[0], Color::rgb(255, 255, 255)); // top-left untouched
         assert_eq!(c.pixels[3 * 4 + 3], Color::rgb(0, 0, 0)); // bottom-right filled
     }
@@ -125,7 +141,20 @@ mod tests {
     #[test]
     fn alpha_blends_halfway() {
         let mut c = Canvas::new(1, 1, Color::rgb(0, 0, 0));
-        c.fill_rect(Rect { x: 0.0, y: 0.0, width: 1.0, height: 1.0 }, Color { r: 255, g: 255, b: 255, a: 128 });
+        c.fill_rect(
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 1.0,
+                height: 1.0,
+            },
+            Color {
+                r: 255,
+                g: 255,
+                b: 255,
+                a: 128,
+            },
+        );
         let p = c.pixels[0];
         assert!((120..=135).contains(&p.r), "got {}", p.r);
     }

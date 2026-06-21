@@ -81,7 +81,12 @@ fn main() -> ExitCode {
     let author = css::parse(&css_text);
     let styled = style::style_tree(&dom, &author);
     let viewport = Dimensions {
-        content: Rect { x: 0.0, y: 0.0, width: opts.width, height: 0.0 },
+        content: Rect {
+            x: 0.0,
+            y: 0.0,
+            width: opts.width,
+            height: 0.0,
+        },
         ..Default::default()
     };
     let layout_root = layout::layout_tree(&styled, viewport, &fonts);
@@ -129,7 +134,8 @@ fn paint_page(
     width: f32,
 ) -> render::Canvas {
     let height = layout_root.dimensions.margin_box().height.ceil().max(1.0);
-    let mut canvas = render::Canvas::new(width as usize, height as usize, Color::rgb(255, 255, 255));
+    let mut canvas =
+        render::Canvas::new(width as usize, height as usize, Color::rgb(255, 255, 255));
     let display_list = paint::build_display_list(layout_root);
     paint::paint_list(&mut canvas, &display_list, fonts);
     canvas
@@ -204,7 +210,13 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
     let target = target.ok_or("no URL or file given")?;
     // Default to a PNG next to the target if no mode was chosen.
     let mode = mode.unwrap_or_else(|| Mode::Png("out/page.png".to_string()));
-    Ok(Options { target, width, clip_top, clip_height, mode })
+    Ok(Options {
+        target,
+        width,
+        clip_top,
+        clip_height,
+        mode,
+    })
 }
 
 fn print_usage() {
@@ -228,6 +240,7 @@ fn print_usage() {
          <URL|FILE> may be an https:// URL, a file:// URL, or a local path.\n\
          In the window: arrows/j/k scroll, Space/PageDn page, Home/End jump,\n\
          q or Esc quits. See docs/ for the matching chapters.",
-        robin::VERSION, DEFAULT_WIDTH as u32
+        robin::VERSION,
+        DEFAULT_WIDTH as u32
     );
 }

@@ -65,13 +65,17 @@ impl Fonts {
 
     /// The horizontal advance of a single character at a given size.
     pub fn char_advance(&self, ch: char, size: f32, bold: bool, italic: bool, mono: bool) -> f32 {
-        self.face(bold, italic, mono).metrics(ch, size).advance_width
+        self.face(bold, italic, mono)
+            .metrics(ch, size)
+            .advance_width
     }
 
     /// The total width of a string laid out on one line.
     pub fn measure(&self, text: &str, size: f32, bold: bool, italic: bool, mono: bool) -> f32 {
         let font = self.face(bold, italic, mono);
-        text.chars().map(|c| font.metrics(c, size).advance_width).sum()
+        text.chars()
+            .map(|c| font.metrics(c, size).advance_width)
+            .sum()
     }
 
     /// Vertical metrics for a line of text at a given size: how far the tallest
@@ -86,7 +90,11 @@ impl Fonts {
                 line_height: m.new_line_size,
             },
             // Fallback proportions if the font lacks the table.
-            None => LineMetrics { ascent: size * 0.8, descent: size * 0.2, line_height: size * 1.2 },
+            None => LineMetrics {
+                ascent: size * 0.8,
+                descent: size * 0.2,
+                line_height: size * 1.2,
+            },
         }
     }
 
@@ -102,7 +110,15 @@ impl Fonts {
             let glyph_left = pen_x + metrics.xmin as f32;
             let glyph_top = run.y - (metrics.ymin as f32 + metrics.height as f32);
 
-            blit_coverage(canvas, &bitmap, metrics.width, metrics.height, glyph_left, glyph_top, run.color);
+            blit_coverage(
+                canvas,
+                &bitmap,
+                metrics.width,
+                metrics.height,
+                glyph_left,
+                glyph_top,
+                run.color,
+            );
             pen_x += metrics.advance_width;
         }
     }
@@ -173,16 +189,19 @@ mod tests {
     fn drawing_puts_dark_pixels_on_the_canvas() {
         let fonts = Fonts::bundled().unwrap();
         let mut canvas = Canvas::new(120, 40, Color::rgb(255, 255, 255));
-        fonts.draw_run(&mut canvas, &TextRun {
-            text: "Robin".into(),
-            x: 4.0,
-            y: 28.0,
-            font_size: 20.0,
-            color: Color::rgb(0, 0, 0),
-            bold: false,
-            italic: false,
-            monospace: false,
-        });
+        fonts.draw_run(
+            &mut canvas,
+            &TextRun {
+                text: "Robin".into(),
+                x: 4.0,
+                y: 28.0,
+                font_size: 20.0,
+                color: Color::rgb(0, 0, 0),
+                bold: false,
+                italic: false,
+                monospace: false,
+            },
+        );
         // Some pixels should now be noticeably darker than the white background.
         let dark = canvas.pixels.iter().filter(|p| p.r < 128).count();
         assert!(dark > 20, "expected glyph pixels, got {dark}");

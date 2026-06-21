@@ -83,7 +83,12 @@ impl Color {
     pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
         Color { r, g, b, a: 255 }
     }
-    pub const TRANSPARENT: Color = Color { r: 0, g: 0, b: 0, a: 0 };
+    pub const TRANSPARENT: Color = Color {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 0,
+    };
 }
 
 /// Specificity is the tie-breaker in the cascade: (#id, #class, #tag). Higher
@@ -124,13 +129,21 @@ impl Value {
 
 /// Parse a whole stylesheet.
 pub fn parse(source: &str) -> Stylesheet {
-    let mut parser = Parser { input: source, pos: 0 };
-    Stylesheet { rules: parser.parse_rules() }
+    let mut parser = Parser {
+        input: source,
+        pos: 0,
+    };
+    Stylesheet {
+        rules: parser.parse_rules(),
+    }
 }
 
 /// Parse a single declaration block (the contents of a `style="..."` attribute).
 pub fn parse_declarations(source: &str) -> Vec<Declaration> {
-    let mut parser = Parser { input: source, pos: 0 };
+    let mut parser = Parser {
+        input: source,
+        pos: 0,
+    };
     parser.parse_declarations_until_end()
 }
 
@@ -166,7 +179,10 @@ impl<'a> Parser<'a> {
         if selectors.is_empty() {
             None
         } else {
-            Some(Rule { selectors, declarations })
+            Some(Rule {
+                selectors,
+                declarations,
+            })
         }
     }
 
@@ -202,7 +218,7 @@ impl<'a> Parser<'a> {
         }
         // Sort highest-specificity first so style matching can stop at the first
         // hit per property if it wants to.
-        selectors.sort_by(|a, b| b.specificity().cmp(&a.specificity()));
+        selectors.sort_by_key(|s| std::cmp::Reverse(s.specificity()));
         selectors
     }
 
@@ -312,7 +328,11 @@ impl<'a> Parser<'a> {
 
     fn parse_length(&mut self) -> Option<Value> {
         let number = self.parse_number()?;
-        let unit = match self.parse_identifier_or_percent().to_ascii_lowercase().as_str() {
+        let unit = match self
+            .parse_identifier_or_percent()
+            .to_ascii_lowercase()
+            .as_str()
+        {
             "px" | "" => Unit::Px,
             "em" => Unit::Em,
             "rem" => Unit::Rem,
@@ -484,8 +504,17 @@ fn parse_color_function(word: &str, parser: &mut Parser) -> Option<Color> {
     if args.len() < 3 {
         return None;
     }
-    let a = if args.len() >= 4 { (args[3] * 255.0).round() as u8 } else { 255 };
-    Some(Color { r: args[0] as u8, g: args[1] as u8, b: args[2] as u8, a })
+    let a = if args.len() >= 4 {
+        (args[3] * 255.0).round() as u8
+    } else {
+        255
+    };
+    Some(Color {
+        r: args[0] as u8,
+        g: args[1] as u8,
+        b: args[2] as u8,
+        a,
+    })
 }
 
 fn parse_hex(hex: &str) -> Option<Color> {
@@ -498,7 +527,11 @@ fn parse_hex(hex: &str) -> Option<Color> {
             let b = parse2(&hex[2..3].repeat(2))?;
             Some(Color::rgb(r, g, b))
         }
-        6 => Some(Color::rgb(parse2(&hex[0..2])?, parse2(&hex[2..4])?, parse2(&hex[4..6])?)),
+        6 => Some(Color::rgb(
+            parse2(&hex[0..2])?,
+            parse2(&hex[2..4])?,
+            parse2(&hex[4..6])?,
+        )),
         8 => Some(Color {
             r: parse2(&hex[0..2])?,
             g: parse2(&hex[2..4])?,
@@ -551,7 +584,10 @@ mod tests {
         assert_eq!(rule.selectors.len(), 2);
         assert_eq!(rule.declarations.len(), 2);
         assert_eq!(rule.declarations[0].name, "color");
-        assert_eq!(rule.declarations[0].value, Value::ColorValue(Color::rgb(255, 102, 0)));
+        assert_eq!(
+            rule.declarations[0].value,
+            Value::ColorValue(Color::rgb(255, 102, 0))
+        );
     }
 
     #[test]
@@ -582,9 +618,18 @@ mod tests {
     #[test]
     fn colors_in_many_forms() {
         let ss = parse("a { color: #f60; } b { color: rgb(10, 20, 30); } i { color: navy; }");
-        assert_eq!(ss.rules[0].declarations[0].value, Value::ColorValue(Color::rgb(255, 102, 0)));
-        assert_eq!(ss.rules[1].declarations[0].value, Value::ColorValue(Color::rgb(10, 20, 30)));
-        assert_eq!(ss.rules[2].declarations[0].value, Value::ColorValue(Color::rgb(0, 0, 128)));
+        assert_eq!(
+            ss.rules[0].declarations[0].value,
+            Value::ColorValue(Color::rgb(255, 102, 0))
+        );
+        assert_eq!(
+            ss.rules[1].declarations[0].value,
+            Value::ColorValue(Color::rgb(10, 20, 30))
+        );
+        assert_eq!(
+            ss.rules[2].declarations[0].value,
+            Value::ColorValue(Color::rgb(0, 0, 128))
+        );
     }
 
     #[test]
@@ -594,25 +639,31 @@ mod tests {
         );
         // Only the h1 rule survives.
         assert_eq!(ss.rules.len(), 1);
-        assert_eq!(ss.rules[0].selectors[0], Selector::Simple(SimpleSelector {
-            tag_name: Some("h1".into()),
-            ..Default::default()
-        }));
+        assert_eq!(
+            ss.rules[0].selectors[0],
+            Selector::Simple(SimpleSelector {
+                tag_name: Some("h1".into()),
+                ..Default::default()
+            })
+        );
     }
 
     #[test]
     fn recovers_from_a_malformed_rule() {
         let ss = parse("p { color: ; bogus } valid { color: red; }");
         // The valid rule still parses.
-        assert!(ss.rules.iter().any(|r| r.declarations.iter().any(|d| d.name == "color"
-            && d.value == Value::ColorValue(Color::rgb(255, 0, 0)))));
+        assert!(ss.rules.iter().any(|r| r
+            .declarations
+            .iter()
+            .any(|d| d.name == "color" && d.value == Value::ColorValue(Color::rgb(255, 0, 0)))));
     }
 
     #[test]
     fn unsupported_selectors_are_dropped_not_misread() {
         // Descendant, child and pseudo selectors must NOT turn into a list of
         // simple selectors (which would mis-style unrelated elements).
-        let ss = parse(".nav a { color: red } article > p { color: green } a:hover { color: blue }");
+        let ss =
+            parse(".nav a { color: red } article > p { color: green } a:hover { color: blue }");
         for rule in &ss.rules {
             for sel in &rule.selectors {
                 let Selector::Simple(s) = sel;
@@ -625,7 +676,10 @@ mod tests {
             }
         }
         // The bare `a` from `.nav a` must not match every <a>.
-        let a_only = Selector::Simple(SimpleSelector { tag_name: Some("a".into()), ..Default::default() });
+        let a_only = Selector::Simple(SimpleSelector {
+            tag_name: Some("a".into()),
+            ..Default::default()
+        });
         assert!(!ss.rules.iter().any(|r| r.selectors.contains(&a_only)));
     }
 
@@ -635,11 +689,14 @@ mod tests {
         let ss = parse("a.story { color: red; } li, .item { color: blue; }");
         assert_eq!(ss.rules.len(), 2);
         let first = &ss.rules[0].selectors[0];
-        assert_eq!(*first, Selector::Simple(SimpleSelector {
-            tag_name: Some("a".into()),
-            classes: vec!["story".into()],
-            ..Default::default()
-        }));
+        assert_eq!(
+            *first,
+            Selector::Simple(SimpleSelector {
+                tag_name: Some("a".into()),
+                classes: vec!["story".into()],
+                ..Default::default()
+            })
+        );
         assert_eq!(ss.rules[1].selectors.len(), 2); // li and .item
     }
 

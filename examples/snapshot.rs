@@ -31,9 +31,8 @@ fn main() {
 
     // Inject the collected CSS as one <style> block. A banner comment records
     // where and (roughly) when the snapshot came from.
-    let style_block = format!(
-        "<style>\n/* Inlined by robin's snapshot tool from {url} */\n{css}\n</style>\n"
-    );
+    let style_block =
+        format!("<style>\n/* Inlined by robin's snapshot tool from {url} */\n{css}\n</style>\n");
     let snapshot = inject_into_head(&page.body, &style_block);
 
     std::fs::write(out, snapshot.as_bytes()).unwrap_or_else(|e| {

@@ -161,7 +161,10 @@ pub fn build_layout_tree<'a>(style_node: &'a StyledNode<'a>) -> LayoutBox<'a> {
     for child in &style_node.children {
         match effective_display(child) {
             Display::None => {} // skip display:none entirely
-            Display::Inline => root.inline_container().children.push(build_layout_tree(child)),
+            Display::Inline => root
+                .inline_container()
+                .children
+                .push(build_layout_tree(child)),
             _ => root.children.push(build_layout_tree(child)),
         }
     }
@@ -250,14 +253,26 @@ impl<'a> LayoutBox<'a> {
 
         let margin_left = lookup_len(style, &["margin-left", "margin"], &zero);
         let margin_right = lookup_len(style, &["margin-right", "margin"], &zero);
-        let border_left = lookup_len(style, &["border-left-width", "border-width", "border"], &zero);
-        let border_right =
-            lookup_len(style, &["border-right-width", "border-width", "border"], &zero);
+        let border_left = lookup_len(
+            style,
+            &["border-left-width", "border-width", "border"],
+            &zero,
+        );
+        let border_right = lookup_len(
+            style,
+            &["border-right-width", "border-width", "border"],
+            &zero,
+        );
         let padding_left = lookup_len(style, &["padding-left", "padding"], &zero);
         let padding_right = lookup_len(style, &["padding-right", "padding"], &zero);
 
         let total: f32 = [
-            &margin_left, &margin_right, &border_left, &border_right, &padding_left, &padding_right,
+            &margin_left,
+            &margin_right,
+            &border_left,
+            &border_right,
+            &padding_left,
+            &padding_right,
             &width,
         ]
         .iter()
@@ -297,7 +312,11 @@ impl<'a> LayoutBox<'a> {
                 if margin_right == Auto {
                     margin_right = Length(0.0);
                 }
-                width = if underflow >= 0.0 { Length(underflow) } else { Length(0.0) };
+                width = if underflow >= 0.0 {
+                    Length(underflow)
+                } else {
+                    Length(0.0)
+                };
             }
         }
 
@@ -319,14 +338,22 @@ impl<'a> LayoutBox<'a> {
 
         d.margin.top = lookup_len(style, &["margin-top", "margin"], &zero).to_px();
         d.margin.bottom = lookup_len(style, &["margin-bottom", "margin"], &zero).to_px();
-        d.border.top = lookup_len(style, &["border-top-width", "border-width", "border"], &zero).to_px();
-        d.border.bottom =
-            lookup_len(style, &["border-bottom-width", "border-width", "border"], &zero).to_px();
+        d.border.top = lookup_len(
+            style,
+            &["border-top-width", "border-width", "border"],
+            &zero,
+        )
+        .to_px();
+        d.border.bottom = lookup_len(
+            style,
+            &["border-bottom-width", "border-width", "border"],
+            &zero,
+        )
+        .to_px();
         d.padding.top = lookup_len(style, &["padding-top", "padding"], &zero).to_px();
         d.padding.bottom = lookup_len(style, &["padding-bottom", "padding"], &zero).to_px();
 
-        d.content.x =
-            containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
+        d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
         // Stack below everything already placed in the container.
         d.content.y = containing_block.content.height
             + containing_block.content.y
@@ -397,7 +424,9 @@ impl InlineStyle {
             _ => false,
         };
         let italic = matches!(
-            node.value("font-style").as_ref().and_then(crate::css::Value::keyword),
+            node.value("font-style")
+                .as_ref()
+                .and_then(crate::css::Value::keyword),
             Some("italic") | Some("oblique")
         );
         let monospace = node
@@ -409,7 +438,13 @@ impl InlineStyle {
             Some(Value::ColorValue(c)) => c,
             _ => Color::rgb(0, 0, 0),
         };
-        InlineStyle { size, bold, italic, monospace, color }
+        InlineStyle {
+            size,
+            bold,
+            italic,
+            monospace,
+            color,
+        }
     }
 }
 
@@ -500,9 +535,12 @@ impl<'f> InlineFlow<'f> {
     }
 
     fn place_word(&mut self, word: &str, style: InlineStyle) {
-        let word_w = self.fonts.measure(word, style.size, style.bold, style.italic, style.monospace);
+        let word_w =
+            self.fonts
+                .measure(word, style.size, style.bold, style.italic, style.monospace);
         let space_w = if self.pending_space {
-            self.fonts.measure(" ", style.size, style.bold, style.italic, style.monospace)
+            self.fonts
+                .measure(" ", style.size, style.bold, style.italic, style.monospace)
         } else {
             0.0
         };
@@ -516,7 +554,9 @@ impl<'f> InlineFlow<'f> {
         }
         self.pending_space = false;
 
-        let m = self.fonts.line_metrics(style.size, style.bold, style.italic, style.monospace);
+        let m = self
+            .fonts
+            .line_metrics(style.size, style.bold, style.italic, style.monospace);
         self.current_line.push(PendingFragment {
             frag: InlineFragment {
                 text: word.to_string(),
@@ -540,10 +580,14 @@ impl<'f> InlineFlow<'f> {
         let (max_ascent, line_height) = self
             .current_line
             .iter()
-            .fold((0.0_f32, 0.0_f32), |(a, h), pf| (a.max(pf.ascent), h.max(pf.line_height)));
+            .fold((0.0_f32, 0.0_f32), |(a, h), pf| {
+                (a.max(pf.ascent), h.max(pf.line_height))
+            });
         // An empty line (e.g. a leading <br>) still advances by a default height.
         let line_height = if self.current_line.is_empty() {
-            self.fonts.line_metrics(16.0, false, false, false).line_height
+            self.fonts
+                .line_metrics(16.0, false, false, false)
+                .line_height
         } else {
             line_height
         };
@@ -612,11 +656,7 @@ fn length_px(style: &StyledNode, name: &str) -> Option<f32> {
 
 /// Look up the first present property among `names` (e.g. margin-left then the
 /// margin shorthand), honoring the `auto` keyword. Falls back to `default`.
-fn lookup_len(
-    style: Option<&StyledNode>,
-    names: &[&str],
-    default: &LengthOrAuto,
-) -> LengthOrAuto {
+fn lookup_len(style: Option<&StyledNode>, names: &[&str], default: &LengthOrAuto) -> LengthOrAuto {
     let Some(style) = style else { return *default };
     for name in names {
         match style.value(name) {
@@ -663,7 +703,12 @@ mod tests {
         let sheet = css::parse(css_src);
         let styled = style::style_tree(&dom, &sheet);
         let viewport = Dimensions {
-            content: Rect { x: 0.0, y: 0.0, width, height: 0.0 },
+            content: Rect {
+                x: 0.0,
+                y: 0.0,
+                width,
+                height: 0.0,
+            },
             ..Default::default()
         };
         // We have to keep the styled tree alive for the borrow; build inline.
@@ -698,11 +743,7 @@ mod tests {
 
     #[test]
     fn blocks_stack_vertically() {
-        let dump = layout(
-            "<div></div><div></div>",
-            "div { height: 30px; }",
-            600.0,
-        );
+        let dump = layout("<div></div><div></div>", "div { height: 30px; }", 600.0);
         // Second div sits at y=30, below the first.
         assert!(dump.contains("@ (0,0) 600x30"), "got: {dump}");
         assert!(dump.contains("@ (0,30) 600x30"), "got: {dump}");
@@ -714,7 +755,12 @@ mod tests {
         width: f32,
     ) -> LayoutBox<'a> {
         let viewport = Dimensions {
-            content: Rect { x: 0.0, y: 0.0, width, height: 0.0 },
+            content: Rect {
+                x: 0.0,
+                y: 0.0,
+                width,
+                height: 0.0,
+            },
             ..Default::default()
         };
         layout_tree(styled, viewport, fonts)
@@ -740,7 +786,10 @@ mod tests {
         all_fragments(&lb, &mut frags);
         let distinct_baselines: std::collections::BTreeSet<i32> =
             frags.iter().map(|f| f.baseline as i32).collect();
-        assert!(distinct_baselines.len() >= 3, "expected wrapping onto >=3 lines");
+        assert!(
+            distinct_baselines.len() >= 3,
+            "expected wrapping onto >=3 lines"
+        );
         assert!(frags.iter().any(|f| f.text == "seven"));
     }
 
@@ -754,7 +803,9 @@ mod tests {
         all_fragments(&lb, &mut frags);
         assert!(frags.iter().any(|f| f.text == "strong" && f.bold));
         assert!(frags.iter().any(|f| f.text == "slanted" && f.italic));
-        assert!(frags.iter().any(|f| f.text == "plain" && !f.bold && !f.italic));
+        assert!(frags
+            .iter()
+            .any(|f| f.text == "plain" && !f.bold && !f.italic));
     }
 
     #[test]
