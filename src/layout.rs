@@ -23,7 +23,9 @@
 //! its container, then its position, then lay out its children to discover its
 //! height.
 
+use crate::css::Color;
 use crate::style::{Display, StyledNode};
+use crate::text::Fonts;
 
 /// A rectangle in CSS pixels. The origin is the top-left of the page.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -86,6 +88,23 @@ pub struct LayoutBox<'a> {
     pub dimensions: Dimensions,
     pub box_type: BoxType<'a>,
     pub children: Vec<LayoutBox<'a>>,
+    /// Positioned text produced when this box runs an inline formatting context.
+    /// Only anonymous/inline boxes fill this in; paint reads it to draw glyphs.
+    pub fragments: Vec<InlineFragment>,
+}
+
+/// A laid-out run of text on a single line: the word(s), where to draw them
+/// (`x`, and `baseline` as the y of the text baseline), and how.
+#[derive(Debug, Clone)]
+pub struct InlineFragment {
+    pub text: String,
+    pub x: f32,
+    pub baseline: f32,
+    pub font_size: f32,
+    pub color: Color,
+    pub bold: bool,
+    pub italic: bool,
+    pub monospace: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -99,7 +118,12 @@ pub enum BoxType<'a> {
 
 impl<'a> LayoutBox<'a> {
     fn new(box_type: BoxType<'a>) -> Self {
-        LayoutBox { box_type, dimensions: Dimensions::default(), children: Vec::new() }
+        LayoutBox {
+            box_type,
+            dimensions: Dimensions::default(),
+            children: Vec::new(),
+            fragments: Vec::new(),
+        }
     }
 
     /// The styled node this box came from, if any (anonymous boxes have none).
@@ -115,10 +139,14 @@ impl<'a> LayoutBox<'a> {
 ///
 /// The viewport's width is fixed (the window/PNG width); its height grows to fit
 /// the content, which is what lets a page be taller than the screen and scroll.
-pub fn layout_tree<'a>(node: &'a StyledNode<'a>, mut viewport: Dimensions) -> LayoutBox<'a> {
+pub fn layout_tree<'a>(
+    node: &'a StyledNode<'a>,
+    mut viewport: Dimensions,
+    fonts: &Fonts,
+) -> LayoutBox<'a> {
     viewport.content.height = 0.0; // height is discovered from content
     let mut root = build_layout_tree(node);
-    root.layout(viewport);
+    root.layout(viewport, fonts);
     root
 }
 
@@ -155,23 +183,41 @@ impl<'a> LayoutBox<'a> {
     }
 
     /// Lay this box (and its subtree) out inside its containing block.
-    pub fn layout(&mut self, containing_block: Dimensions) {
+    pub fn layout(&mut self, containing_block: Dimensions, fonts: &Fonts) {
         match self.box_type {
-            BoxType::Block(_) => self.layout_block(containing_block),
-            // Anonymous boxes participate in block flow as full-width strips.
-            // Real inline layout (text wrapping) is added in the text chapter;
-            // for now an inline/anonymous box is a zero-height placeholder.
-            BoxType::Anonymous | BoxType::Inline(_) => self.layout_block(containing_block),
+            BoxType::Block(_) => self.layout_block(containing_block, fonts),
+            // An anonymous box holds a run of inline content: it runs an inline
+            // formatting context, flowing text into lines. A bare inline box
+            // reaching layout() (an inline directly under the root) is treated
+            // the same way.
+            BoxType::Anonymous | BoxType::Inline(_) => self.layout_inline(containing_block, fonts),
         }
     }
 
-    fn layout_block(&mut self, containing_block: Dimensions) {
+    fn layout_block(&mut self, containing_block: Dimensions, fonts: &Fonts) {
         // Width depends on the container, so compute it top-down first...
         self.calculate_block_width(containing_block);
         self.calculate_block_position(containing_block);
         // ...then lay out children, whose total height feeds our height.
-        self.layout_block_children();
+        self.layout_block_children(fonts);
         self.calculate_block_height();
+    }
+
+    /// Lay out an inline formatting context: take a full-width strip and flow the
+    /// inline descendants into wrapped lines of text.
+    fn layout_inline(&mut self, containing_block: Dimensions, fonts: &Fonts) {
+        // An inline strip is as wide as its container, with no box-model rings.
+        self.calculate_block_width(containing_block);
+        self.calculate_block_position(containing_block);
+
+        let origin = self.dimensions.content;
+        let mut flow = InlineFlow::new(origin.x, origin.y, origin.width, fonts);
+        for child in &self.children {
+            flow.add_box(child);
+        }
+        flow.finish();
+        self.fragments = flow.fragments;
+        self.dimensions.content.height = flow.height;
     }
 
     /// Resolve width and the horizontal margins/border/padding.
@@ -271,11 +317,11 @@ impl<'a> LayoutBox<'a> {
             + d.padding.top;
     }
 
-    fn layout_block_children(&mut self) {
+    fn layout_block_children(&mut self, fonts: &Fonts) {
         let mut content_height: f32 = 0.0;
         let self_dims = self.dimensions;
         for child in &mut self.children {
-            child.layout(self_dims_with_height(self_dims, content_height));
+            child.layout(self_dims_with_height(self_dims, content_height), fonts);
             // Track how much vertical space children have consumed.
             content_height += child.dimensions.margin_box().height;
         }
@@ -299,6 +345,207 @@ impl<'a> LayoutBox<'a> {
 fn self_dims_with_height(mut d: Dimensions, height: f32) -> Dimensions {
     d.content.height = height;
     d
+}
+
+// --- Inline formatting context ----------------------------------------------
+// This is the line-breaker: it walks the inline boxes, splits their text into
+// words, and flows the words left-to-right, wrapping to a new line whenever the
+// next word would overshoot the available width. Mixed styles (a bold word next
+// to a link next to plain text) all share the same line.
+
+/// The visual style of a run of inline text, pulled off a styled node.
+#[derive(Clone, Copy)]
+struct InlineStyle {
+    size: f32,
+    bold: bool,
+    italic: bool,
+    monospace: bool,
+    color: Color,
+}
+
+impl InlineStyle {
+    fn from_node(node: &StyledNode) -> InlineStyle {
+        use crate::css::Value;
+        let size = node
+            .value("font-size")
+            .map(|v| v.to_px())
+            .filter(|&px| px > 0.0)
+            .unwrap_or(16.0);
+
+        let bold = match node.value("font-weight") {
+            Some(Value::Keyword(k)) => k == "bold" || k == "bolder",
+            // Numeric weights parse as lengths; 600+ is bold.
+            Some(v @ Value::Length(..)) => v.to_px() >= 600.0,
+            _ => false,
+        };
+        let italic = matches!(
+            node.value("font-style").as_ref().and_then(crate::css::Value::keyword),
+            Some("italic") | Some("oblique")
+        );
+        let monospace = node
+            .value("font-family")
+            .and_then(|v| v.keyword().map(str::to_string))
+            .map(|f| f.contains("mono"))
+            .unwrap_or(false);
+        let color = match node.value("color") {
+            Some(Value::ColorValue(c)) => c,
+            _ => Color::rgb(0, 0, 0),
+        };
+        InlineStyle { size, bold, italic, monospace, color }
+    }
+}
+
+/// Flows inline content into wrapped lines, accumulating [`InlineFragment`]s.
+struct InlineFlow<'f> {
+    fonts: &'f Fonts,
+    line_start_x: f32,
+    origin_y: f32,
+    avail: f32,
+    cursor_x: f32,
+    line_top: f32,
+    /// Fragments on the line currently being built (their baseline is assigned
+    /// once we know the line's tallest glyph).
+    current_line: Vec<PendingFragment>,
+    /// Finished, baseline-positioned fragments.
+    fragments: Vec<InlineFragment>,
+    /// Whether a space should precede the next word.
+    pending_space: bool,
+    /// Total height consumed so far (`line_top - origin_y`).
+    height: f32,
+}
+
+struct PendingFragment {
+    frag: InlineFragment,
+    ascent: f32,
+    line_height: f32,
+}
+
+impl<'f> InlineFlow<'f> {
+    fn new(x: f32, y: f32, avail: f32, fonts: &'f Fonts) -> Self {
+        InlineFlow {
+            fonts,
+            line_start_x: x,
+            origin_y: y,
+            avail,
+            cursor_x: x,
+            line_top: y,
+            current_line: Vec::new(),
+            fragments: Vec::new(),
+            pending_space: false,
+            height: 0.0,
+        }
+    }
+
+    /// Walk one inline box, emitting its text (and recursing into nested inline
+    /// elements like `<a><b>…</b></a>`).
+    fn add_box(&mut self, b: &LayoutBox) {
+        if let Some(node) = b.styled_node() {
+            if let Some(text) = node.node.text_content() {
+                self.add_text(text, InlineStyle::from_node(node));
+                return;
+            }
+            if node.node.tag_name() == Some("br") {
+                self.break_line();
+                return;
+            }
+        }
+        // An inline element (or a stray block in inline context): flow its
+        // children into the same context.
+        for child in &b.children {
+            self.add_box(child);
+        }
+    }
+
+    fn add_text(&mut self, text: &str, style: InlineStyle) {
+        let leading_ws = text.starts_with(char::is_whitespace);
+        let trailing_ws = text.ends_with(char::is_whitespace);
+        let words: Vec<&str> = text.split_whitespace().collect();
+
+        if words.is_empty() {
+            // Whitespace-only text still separates its neighbours.
+            self.pending_space |= leading_ws || trailing_ws;
+            return;
+        }
+        if leading_ws {
+            self.pending_space = true;
+        }
+        let last = words.len() - 1;
+        for (i, word) in words.into_iter().enumerate() {
+            self.place_word(word, style);
+            if i < last {
+                self.pending_space = true; // space between words in this run
+            }
+        }
+        if trailing_ws {
+            self.pending_space = true;
+        }
+    }
+
+    fn place_word(&mut self, word: &str, style: InlineStyle) {
+        let word_w = self.fonts.measure(word, style.size, style.bold, style.italic, style.monospace);
+        let space_w = if self.pending_space {
+            self.fonts.measure(" ", style.size, style.bold, style.italic, style.monospace)
+        } else {
+            0.0
+        };
+
+        let at_line_start = self.cursor_x <= self.line_start_x + 0.01;
+        let overflows = self.cursor_x + space_w + word_w > self.line_start_x + self.avail;
+        if overflows && !at_line_start {
+            self.break_line();
+        } else {
+            self.cursor_x += space_w;
+        }
+        self.pending_space = false;
+
+        let m = self.fonts.line_metrics(style.size, style.bold, style.italic, style.monospace);
+        self.current_line.push(PendingFragment {
+            frag: InlineFragment {
+                text: word.to_string(),
+                x: self.cursor_x,
+                baseline: 0.0, // filled in by break_line
+                font_size: style.size,
+                color: style.color,
+                bold: style.bold,
+                italic: style.italic,
+                monospace: style.monospace,
+            },
+            ascent: m.ascent,
+            line_height: m.line_height,
+        });
+        self.cursor_x += word_w;
+    }
+
+    /// End the current line: align everyone to the tallest baseline, commit the
+    /// fragments, and drop down to the next line.
+    fn break_line(&mut self) {
+        let (max_ascent, line_height) = self
+            .current_line
+            .iter()
+            .fold((0.0_f32, 0.0_f32), |(a, h), pf| (a.max(pf.ascent), h.max(pf.line_height)));
+        // An empty line (e.g. a leading <br>) still advances by a default height.
+        let line_height = if self.current_line.is_empty() {
+            self.fonts.line_metrics(16.0, false, false, false).line_height
+        } else {
+            line_height
+        };
+        let baseline = self.line_top + max_ascent;
+
+        for mut pf in self.current_line.drain(..) {
+            pf.frag.baseline = baseline;
+            self.fragments.push(pf.frag);
+        }
+        self.line_top += line_height;
+        self.cursor_x = self.line_start_x;
+        self.pending_space = false;
+        self.height = self.line_top - self.origin_y;
+    }
+
+    fn finish(&mut self) {
+        if !self.current_line.is_empty() {
+            self.break_line();
+        }
+    }
 }
 
 // --- Length resolution ------------------------------------------------------
@@ -376,6 +623,7 @@ mod tests {
     use crate::{css, html, style};
 
     fn layout(html_src: &str, css_src: &str, width: f32) -> String {
+        let fonts = crate::text::Fonts::bundled().unwrap();
         let dom = html::parse(html_src);
         let sheet = css::parse(css_src);
         let styled = style::style_tree(&dom, &sheet);
@@ -384,7 +632,7 @@ mod tests {
             ..Default::default()
         };
         // We have to keep the styled tree alive for the borrow; build inline.
-        let lb = layout_tree(&styled, viewport);
+        let lb = layout_tree(&styled, viewport, &fonts);
         box_tree_to_string(&lb)
     }
 
@@ -415,6 +663,68 @@ mod tests {
         // Second div sits at y=30, below the first.
         assert!(dump.contains("@ (0,0) 600x30"), "got: {dump}");
         assert!(dump.contains("@ (0,30) 600x30"), "got: {dump}");
+    }
+
+    fn layout_box_of<'a>(
+        styled: &'a crate::style::StyledNode<'a>,
+        fonts: &Fonts,
+        width: f32,
+    ) -> LayoutBox<'a> {
+        let viewport = Dimensions {
+            content: Rect { x: 0.0, y: 0.0, width, height: 0.0 },
+            ..Default::default()
+        };
+        layout_tree(styled, viewport, fonts)
+    }
+
+    // Collect every inline fragment in the tree.
+    fn all_fragments<'a>(b: &LayoutBox<'a>, out: &mut Vec<InlineFragment>) {
+        out.extend(b.fragments.iter().cloned());
+        for c in &b.children {
+            all_fragments(c, out);
+        }
+    }
+
+    #[test]
+    fn long_text_wraps_onto_multiple_lines() {
+        let fonts = crate::text::Fonts::bundled().unwrap();
+        let dom = html::parse("<p>one two three four five six seven eight nine ten</p>");
+        let sheet = css::parse("p { margin: 0; }");
+        let styled = style::style_tree(&dom, &sheet);
+        // Narrow viewport forces several lines.
+        let lb = layout_box_of(&styled, &fonts, 80.0);
+        let mut frags = Vec::new();
+        all_fragments(&lb, &mut frags);
+        let distinct_baselines: std::collections::BTreeSet<i32> =
+            frags.iter().map(|f| f.baseline as i32).collect();
+        assert!(distinct_baselines.len() >= 3, "expected wrapping onto >=3 lines");
+        assert!(frags.iter().any(|f| f.text == "seven"));
+    }
+
+    #[test]
+    fn bold_and_italic_flags_follow_markup() {
+        let fonts = crate::text::Fonts::bundled().unwrap();
+        let dom = html::parse("<p>plain <b>strong</b> <i>slanted</i></p>");
+        let styled = style::style_tree(&dom, &css::parse(""));
+        let lb = layout_box_of(&styled, &fonts, 400.0);
+        let mut frags = Vec::new();
+        all_fragments(&lb, &mut frags);
+        assert!(frags.iter().any(|f| f.text == "strong" && f.bold));
+        assert!(frags.iter().any(|f| f.text == "slanted" && f.italic));
+        assert!(frags.iter().any(|f| f.text == "plain" && !f.bold && !f.italic));
+    }
+
+    #[test]
+    fn br_forces_a_line_break() {
+        let fonts = crate::text::Fonts::bundled().unwrap();
+        let dom = html::parse("<p>line one<br>line two</p>");
+        let styled = style::style_tree(&dom, &css::parse(""));
+        let lb = layout_box_of(&styled, &fonts, 400.0);
+        let mut frags = Vec::new();
+        all_fragments(&lb, &mut frags);
+        let one = frags.iter().find(|f| f.text == "one").unwrap().baseline;
+        let two = frags.iter().find(|f| f.text == "two").unwrap().baseline;
+        assert!(two > one, "second line should be below the first");
     }
 
     #[test]

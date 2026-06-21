@@ -48,10 +48,44 @@ pub fn build_display_list(layout_root: &LayoutBox) -> Vec<DisplayCommand> {
 fn render_layout_box(list: &mut Vec<DisplayCommand>, layout_box: &LayoutBox) {
     render_background(list, layout_box);
     render_borders(list, layout_box);
-    // Text runs are emitted by the text chapter's code; see paint_inline there.
+    render_list_marker(list, layout_box);
+    render_text(list, layout_box);
     for child in &layout_box.children {
         render_layout_box(list, child);
     }
+}
+
+/// Emit a Text command for every positioned fragment the inline layout produced.
+fn render_text(list: &mut Vec<DisplayCommand>, layout_box: &LayoutBox) {
+    for frag in &layout_box.fragments {
+        list.push(DisplayCommand::Text(TextRun {
+            text: frag.text.clone(),
+            x: frag.x,
+            y: frag.baseline,
+            font_size: frag.font_size,
+            color: frag.color,
+            bold: frag.bold,
+            italic: frag.italic,
+            monospace: frag.monospace,
+        }));
+    }
+}
+
+/// Draw a bullet for `display: list-item` boxes. We use a small filled square
+/// (no font baseline math needed) sitting in the list's padding.
+fn render_list_marker(list: &mut Vec<DisplayCommand>, layout_box: &LayoutBox) {
+    let Some(style) = layout_box.styled_node() else { return };
+    if style.display() != crate::style::Display::ListItem {
+        return;
+    }
+    let content = layout_box.dimensions.content;
+    let color = color_property(style, &["color"]).unwrap_or(Color::rgb(0, 0, 0));
+    list.push(DisplayCommand::SolidColor(color, Rect {
+        x: content.x - 14.0,
+        y: content.y + 7.0,
+        width: 5.0,
+        height: 5.0,
+    }));
 }
 
 fn render_background(list: &mut Vec<DisplayCommand>, layout_box: &LayoutBox) {
@@ -148,7 +182,8 @@ mod tests {
             content: LRect { x: 0.0, y: 0.0, width: 200.0, height: 0.0 },
             ..Default::default()
         };
-        let root = layout::layout_tree(&styled, viewport);
+        let fonts = crate::text::Fonts::bundled().unwrap();
+        let root = layout::layout_tree(&styled, viewport, &fonts);
         build_display_list(&root)
     }
 

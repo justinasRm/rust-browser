@@ -257,8 +257,6 @@ pre, code, tt { font-family: monospace; }
 
 a { color: #0000ee; }
 
-h1 a, h2 a { color: #0000ee; }
-
 hr { margin: 8px; padding: 1px; background: #cccccc; }
 
 td, th { padding: 2px; }
