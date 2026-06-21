@@ -37,6 +37,7 @@ pub mod layout;
 pub mod paint;
 pub mod render;
 pub mod style;
+pub mod text;
 
 /// Crate version, surfaced in the CLI banner.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

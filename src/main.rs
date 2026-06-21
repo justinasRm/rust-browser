@@ -88,10 +88,11 @@ fn main() -> ExitCode {
 
 /// Paint the layout tree to a canvas and save it as a PNG.
 fn render_png(layout_root: &layout::LayoutBox, width: f32, path: &str) -> Result<(), String> {
+    let fonts = robin::text::Fonts::bundled()?;
     let height = layout_root.dimensions.margin_box().height.ceil().max(1.0);
     let mut canvas = render::Canvas::new(width as usize, height as usize, Color::rgb(255, 255, 255));
     let display_list = paint::build_display_list(layout_root);
-    paint::paint_list(&mut canvas, &display_list);
+    paint::paint_list(&mut canvas, &display_list, &fonts);
     ensure_parent_dir(path);
     canvas.save_png(path)
 }

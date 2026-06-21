@@ -123,12 +123,13 @@ fn color_property(style: &StyledNode, names: &[&str]) -> Option<Color> {
     None
 }
 
-/// Execute a display list into a canvas. (Text commands are handled by the text
-/// chapter; here we draw the solid rectangles.)
-pub fn paint_list(canvas: &mut Canvas, list: &[DisplayCommand]) {
+/// Execute a display list into a canvas: solid rectangles via the rasterizer,
+/// text runs via the font engine.
+pub fn paint_list(canvas: &mut Canvas, list: &[DisplayCommand], fonts: &crate::text::Fonts) {
     for cmd in list {
-        if let DisplayCommand::SolidColor(color, rect) = cmd {
-            canvas.fill_rect(*rect, *color);
+        match cmd {
+            DisplayCommand::SolidColor(color, rect) => canvas.fill_rect(*rect, *color),
+            DisplayCommand::Text(run) => fonts.draw_run(canvas, run),
         }
     }
 }

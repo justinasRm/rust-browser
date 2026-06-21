@@ -29,6 +29,9 @@ path = "src/main.rs"
 # Painting: encode the rendered pixel buffer as a PNG. We only need the PNG
 # codec, so we switch off image's many default formats.
 image = { version = "0.25", default-features = false, features = ["png"] }
+# Text: rasterize TrueType glyphs to anti-aliased coverage bitmaps. Pure Rust,
+# no system font dependencies — the fonts themselves are bundled in assets/.
+fontdue = "0.9"
 
 [profile.release]
 opt-level = 3
