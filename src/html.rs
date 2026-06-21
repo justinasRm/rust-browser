@@ -205,11 +205,13 @@ impl<'a, 'b> Tokenizer<'a, 'b> {
     fn parse_comment(&mut self) {
         self.pos += 4; // consume "<!--"
         let start = self.pos;
-        while self.pos < self.input.len() && !self.starts_with("-->") {
+        while self.pos < self.input.len() && !self.starts_with_bytes(b"-->") {
             self.pos += 1;
         }
+        // `start` and `self.pos` both land on char boundaries (the bytes we look
+        // for are ASCII), so slicing the &str here is safe.
         let data = self.chars[start..self.pos].to_string();
-        if self.starts_with("-->") {
+        if self.starts_with_bytes(b"-->") {
             self.pos += 3;
         }
         self.builder.comment(data);
@@ -349,11 +351,11 @@ impl<'a, 'b> Tokenizer<'a, 'b> {
     /// up to its matching close tag, which we leave for the caller to consume.
     fn consume_raw_text(&mut self, tag: &str) {
         let close = format!("</{tag}");
+        let close_bytes = close.as_bytes();
         let start = self.pos;
-        while self.pos < self.input.len() {
-            if self.chars[self.pos..].to_ascii_lowercase().starts_with(&close) {
-                break;
-            }
+        // Byte-wise scan: the body can contain multibyte UTF-8, but the end tag
+        // we stop on is pure ASCII, so we only ever slice at a char boundary.
+        while self.pos < self.input.len() && !self.starts_with_ci(close_bytes) {
             self.pos += 1;
         }
         let raw = self.chars[start..self.pos].to_string();
@@ -365,7 +367,7 @@ impl<'a, 'b> Tokenizer<'a, 'b> {
         };
         self.builder.text(decoded);
         // Consume the "</tag" we stopped on plus its '>'.
-        if self.chars[self.pos..].to_ascii_lowercase().starts_with(&close) {
+        if self.starts_with_ci(close_bytes) {
             self.pos += close.len();
             self.skip_until_byte(b'>');
         }
@@ -379,6 +381,20 @@ impl<'a, 'b> Tokenizer<'a, 'b> {
 
     fn starts_with(&self, s: &str) -> bool {
         self.chars[self.pos..].starts_with(s)
+    }
+
+    /// Byte-wise prefix check. Safe at *any* position, including the middle of a
+    /// multibyte UTF-8 character — unlike slicing `self.chars`, which would
+    /// panic. Used by the scans that walk one byte at a time.
+    fn starts_with_bytes(&self, needle: &[u8]) -> bool {
+        self.input[self.pos..].starts_with(needle)
+    }
+
+    /// Like [`starts_with_bytes`] but ASCII-case-insensitive (for end tags such
+    /// as `</SCRIPT>`).
+    fn starts_with_ci(&self, needle: &[u8]) -> bool {
+        let hay = &self.input[self.pos..];
+        hay.len() >= needle.len() && hay[..needle.len()].eq_ignore_ascii_case(needle)
     }
 
     fn skip_whitespace(&mut self) {
@@ -540,6 +556,13 @@ mod tests {
         let dom = parse("<!DOCTYPE html><!-- hi --><html><body>x</body></html>");
         assert_eq!(dom.tag_name(), Some("html"));
         assert_eq!(dom.inner_text(), "x");
+    }
+
+    #[test]
+    fn multibyte_in_script_and_comments_does_not_panic() {
+        // Bytes of '·' and '—' must never be sliced mid-character.
+        let dom = parse("<style>/* π · ½ — */ a{}</style><!-- café · résumé --><p>after·text</p>");
+        assert!(dom.inner_text().contains("after·text"));
     }
 
     #[test]

@@ -177,11 +177,11 @@ impl<'a> Parser<'a> {
             self.skip_ws_and_comments();
             match self.next_char() {
                 '{' => {
-                    self.pos += 1;
+                    self.bump();
                     break;
                 }
                 ',' => {
-                    self.pos += 1;
+                    self.bump();
                 }
                 '\0' => break,
                 _ => {
@@ -212,17 +212,17 @@ impl<'a> Parser<'a> {
         loop {
             match self.next_char() {
                 '#' => {
-                    self.pos += 1;
+                    self.bump();
                     selector.id = Some(self.parse_identifier());
                     matched_something = true;
                 }
                 '.' => {
-                    self.pos += 1;
+                    self.bump();
                     selector.classes.push(self.parse_identifier());
                     matched_something = true;
                 }
                 '*' => {
-                    self.pos += 1;
+                    self.bump();
                     matched_something = true;
                 }
                 c if is_identifier_char(c) => {
@@ -243,7 +243,7 @@ impl<'a> Parser<'a> {
         let decls = self.parse_declarations_until_end();
         // Consume the closing '}' if present.
         if self.next_char() == '}' {
-            self.pos += 1;
+            self.bump();
         }
         decls
     }
@@ -255,7 +255,7 @@ impl<'a> Parser<'a> {
             match self.next_char() {
                 '}' | '\0' => break,
                 ';' => {
-                    self.pos += 1;
+                    self.bump();
                 }
                 _ => {
                     if let Some(decl) = self.parse_declaration() {
@@ -275,7 +275,7 @@ impl<'a> Parser<'a> {
         if self.next_char() != ':' {
             return None;
         }
-        self.pos += 1;
+        self.bump();
         self.skip_ws_and_comments();
         let value = self.parse_value()?;
         // Skip anything up to the terminating ';' or '}' (e.g. "!important").
@@ -327,10 +327,10 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_hex_color(&mut self) -> Option<Value> {
-        self.pos += 1; // consume '#'
+        self.bump(); // consume '#'
         let start = self.pos;
         while self.pos < self.input.len() && self.next_char().is_ascii_hexdigit() {
-            self.pos += 1;
+            self.bump();
         }
         let hex = &self.input[start..self.pos];
         parse_hex(hex).map(Value::ColorValue)
@@ -341,14 +341,14 @@ impl<'a> Parser<'a> {
     fn parse_identifier(&mut self) -> String {
         let start = self.pos;
         while self.pos < self.input.len() && is_identifier_char(self.next_char()) {
-            self.pos += 1;
+            self.bump();
         }
         self.input[start..self.pos].to_string()
     }
 
     fn parse_identifier_or_percent(&mut self) -> String {
         if self.next_char() == '%' {
-            self.pos += 1;
+            self.bump();
             return "%".to_string();
         }
         self.parse_identifier()
@@ -362,7 +362,7 @@ impl<'a> Parser<'a> {
             if c.is_whitespace() || c == ';' || c == '}' || c == ',' || c == '(' {
                 break;
             }
-            self.pos += 1;
+            self.bump();
         }
         self.input[start..self.pos].to_string()
     }
@@ -372,7 +372,7 @@ impl<'a> Parser<'a> {
         while self.pos < self.input.len() {
             let c = self.next_char();
             if c.is_ascii_digit() || c == '.' || c == '-' || c == '+' {
-                self.pos += 1;
+                self.bump();
             } else {
                 break;
             }
@@ -385,7 +385,7 @@ impl<'a> Parser<'a> {
         while !self.eof() {
             match self.next_char() {
                 ';' => {
-                    self.pos += 1;
+                    self.bump();
                     return;
                 }
                 '{' => {
@@ -404,7 +404,7 @@ impl<'a> Parser<'a> {
                 '{' => depth += 1,
                 '}' => {
                     depth -= 1;
-                    self.pos += 1;
+                    self.bump();
                     if depth == 0 {
                         return;
                     }
@@ -412,13 +412,13 @@ impl<'a> Parser<'a> {
                 }
                 _ => {}
             }
-            self.pos += 1;
+            self.bump();
         }
     }
 
     fn skip_until_any(&mut self, stops: &[char]) {
         while !self.eof() && !stops.contains(&self.next_char()) {
-            self.pos += 1;
+            self.bump();
         }
     }
 
@@ -426,7 +426,7 @@ impl<'a> Parser<'a> {
         loop {
             let before = self.pos;
             while !self.eof() && self.next_char().is_whitespace() {
-                self.pos += 1;
+                self.bump();
             }
             if self.input[self.pos..].starts_with("/*") {
                 if let Some(end) = self.input[self.pos..].find("*/") {
@@ -443,6 +443,16 @@ impl<'a> Parser<'a> {
 
     fn next_char(&self) -> char {
         self.input[self.pos..].chars().next().unwrap_or('\0')
+    }
+
+    /// Advance past the current character by its full UTF-8 width. Using this
+    /// instead of a bare `self.pos += 1` is what keeps the cursor on a character
+    /// boundary even when the stylesheet contains multibyte text (`·`, `—`, …) —
+    /// land mid-character and the next `next_char()` slice would panic.
+    fn bump(&mut self) {
+        if self.pos < self.input.len() {
+            self.pos += self.next_char().len_utf8();
+        }
     }
 
     fn eof(&self) -> bool {
