@@ -193,6 +193,25 @@ fn inheritable_subset(values: &PropertyMap) -> PropertyMap {
         .collect()
 }
 
+/// Collect a page's author CSS by concatenating the text of every `<style>`
+/// element and parsing it. (Linked `<link rel=stylesheet>` files are fetched in
+/// the networking chapter; this handles inline `<style>` blocks.)
+pub fn document_stylesheet(dom: &Node) -> Stylesheet {
+    let mut text = String::new();
+    collect_style_text(dom, &mut text);
+    css::parse(&text)
+}
+
+fn collect_style_text(node: &Node, out: &mut String) {
+    if node.tag_name() == Some("style") {
+        out.push_str(&node.inner_text());
+        out.push('\n');
+    }
+    for child in &node.children {
+        collect_style_text(child, out);
+    }
+}
+
 /// The built-in defaults every browser ships. Parsed once into a [`Stylesheet`].
 ///
 /// Keeping it as real CSS (rather than hard-coded Rust) means the same parser is

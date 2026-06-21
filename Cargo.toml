@@ -26,6 +26,9 @@ path = "src/main.rs"
 # nothing but the standard library. Painting, text, networking and the
 # interactive window each pull in one focused crate.
 [dependencies]
+# Painting: encode the rendered pixel buffer as a PNG. We only need the PNG
+# codec, so we switch off image's many default formats.
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [profile.release]
 opt-level = 3
