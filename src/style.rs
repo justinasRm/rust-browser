@@ -230,7 +230,8 @@ const UA_CSS: &str = r#"
 
 html, body, div, section, article, header, footer, nav, aside, main, figure,
 h1, h2, h3, h4, h5, h6, p, ul, ol, li, dl, dt, dd, blockquote, pre, form,
-table, thead, tbody, tfoot, tr, hr, address, fieldset, figcaption {
+table, thead, tbody, tfoot, tr, hr, address, fieldset, figcaption, center,
+main, details, summary, dir, menu, caption {
     display: block;
 }
 

@@ -153,20 +153,39 @@ pub fn layout_tree<'a>(
 /// Translate the styled tree into a tree of boxes, inserting anonymous boxes to
 /// hold inline runs.
 pub fn build_layout_tree<'a>(style_node: &'a StyledNode<'a>) -> LayoutBox<'a> {
-    let mut root = LayoutBox::new(match style_node.display() {
-        Display::Block | Display::ListItem => BoxType::Block(style_node),
+    let mut root = LayoutBox::new(match effective_display(style_node) {
         Display::Inline => BoxType::Inline(style_node),
-        Display::None => BoxType::Block(style_node), // root is forced visible
+        _ => BoxType::Block(style_node), // Block, ListItem, None-as-root
     });
 
     for child in &style_node.children {
-        match child.display() {
-            Display::Block | Display::ListItem => root.children.push(build_layout_tree(child)),
-            Display::Inline => root.inline_container().children.push(build_layout_tree(child)),
+        match effective_display(child) {
             Display::None => {} // skip display:none entirely
+            Display::Inline => root.inline_container().children.push(build_layout_tree(child)),
+            _ => root.children.push(build_layout_tree(child)),
         }
     }
     root
+}
+
+/// The display value a box should *behave* as. An inline element that contains
+/// block-level descendants (e.g. `<center><table>…` on Hacker News, or
+/// `<a><div>…`) has to become a block itself — an inline box can't lay out block
+/// children. This is the engine's version of the CSS rule that block-in-inline
+/// forces anonymous block wrappers.
+fn effective_display(node: &StyledNode) -> Display {
+    match node.display() {
+        Display::Inline if node.children.iter().any(is_block_level) => Display::Block,
+        d => d,
+    }
+}
+
+fn is_block_level(node: &StyledNode) -> bool {
+    match node.display() {
+        Display::Block | Display::ListItem => true,
+        Display::None => false,
+        Display::Inline => node.children.iter().any(is_block_level),
+    }
 }
 
 impl<'a> LayoutBox<'a> {
