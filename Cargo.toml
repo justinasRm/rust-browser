@@ -32,6 +32,10 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 # Text: rasterize TrueType glyphs to anti-aliased coverage bitmaps. Pure Rust,
 # no system font dependencies — the fonts themselves are bundled in assets/.
 fontdue = "0.9"
+# Networking: a small blocking HTTP/HTTPS client (rustls TLS, gzip) for fetching
+# live pages, plus URL parsing to resolve relative links like <link href>.
+ureq = { version = "2", features = ["tls", "gzip"] }
+url = "2"
 
 [profile.release]
 opt-level = 3

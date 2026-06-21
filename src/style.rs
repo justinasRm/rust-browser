@@ -197,9 +197,14 @@ fn inheritable_subset(values: &PropertyMap) -> PropertyMap {
 /// element and parsing it. (Linked `<link rel=stylesheet>` files are fetched in
 /// the networking chapter; this handles inline `<style>` blocks.)
 pub fn document_stylesheet(dom: &Node) -> Stylesheet {
+    css::parse(&inline_css(dom))
+}
+
+/// The concatenated text of every inline `<style>` block in the document.
+pub fn inline_css(dom: &Node) -> String {
     let mut text = String::new();
     collect_style_text(dom, &mut text);
-    css::parse(&text)
+    text
 }
 
 fn collect_style_text(node: &Node, out: &mut String) {

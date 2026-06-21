@@ -8,7 +8,7 @@ use std::process::ExitCode;
 
 use robin::css::Color;
 use robin::layout::{Dimensions, Rect};
-use robin::{dom, html, layout, paint, render, style};
+use robin::{css, dom, html, layout, net, paint, render, style};
 
 const DEFAULT_WIDTH: f32 = 1000.0;
 
@@ -44,8 +44,8 @@ fn main() -> ExitCode {
         }
     };
 
-    let source = match load_source(&opts.target) {
-        Ok(s) => s,
+    let page = match net::load(&opts.target) {
+        Ok(p) => p,
         Err(e) => {
             eprintln!("robin: could not load {}: {e}", opts.target);
             return ExitCode::FAILURE;
@@ -53,7 +53,7 @@ fn main() -> ExitCode {
     };
 
     // The pipeline, stage by stage.
-    let dom = html::parse(&source);
+    let dom = html::parse(&page.body);
     if let Mode::DumpDom = opts.mode {
         print!("{}", dom::pretty_print(&dom));
         return ExitCode::SUCCESS;
@@ -68,7 +68,14 @@ fn main() -> ExitCode {
         }
     };
 
-    let author = style::document_stylesheet(&dom);
+    // Author CSS = linked stylesheets (fetched for http(s) pages) + inline
+    // <style> blocks. Later source wins ties, so inline goes last.
+    let mut css_text = String::new();
+    if let Some(base) = &page.base_url {
+        css_text.push_str(&net::fetch_linked_css(&dom, base));
+    }
+    css_text.push_str(&style::inline_css(&dom));
+    let author = css::parse(&css_text);
     let styled = style::style_tree(&dom, &author);
     let viewport = Dimensions {
         content: Rect { x: 0.0, y: 0.0, width: opts.width, height: 0.0 },
@@ -150,25 +157,12 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
     Ok(Options { target, width, mode })
 }
 
-/// Load a page's HTML. For now only local files are supported; the networking
-/// commit teaches this to fetch `https://` URLs and bundled snapshots.
-fn load_source(target: &str) -> std::io::Result<String> {
-    if target.starts_with("http://") || target.starts_with("https://") {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "networking is added in a later commit — pass a local .html file for now",
-        ));
-    }
-    let target = target.strip_prefix("file://").unwrap_or(target);
-    std::fs::read_to_string(target)
-}
-
 fn print_usage() {
     println!(
         "robin {} — a tiny browser engine you build from scratch\n\
          \n\
          USAGE:\n    \
-             robin <FILE> [options]\n\
+             robin <URL|FILE> [options]\n\
          \n\
          OPTIONS:\n    \
              --png <FILE>     Render the page to a PNG (default: out/page.png)\n    \
@@ -178,8 +172,8 @@ fn print_usage() {
              -h, --help       Show this help\n    \
              -V, --version    Show the version\n\
          \n\
-         Networking (URLs) and an interactive --window are added in later\n\
-         commits. See docs/ for the matching chapters.",
+         <URL|FILE> may be an https:// URL, a file:// URL, or a local path.\n\
+         An interactive --window is added in the next commit. See docs/.",
         robin::VERSION, DEFAULT_WIDTH as u32
     );
 }
