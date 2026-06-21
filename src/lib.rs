@@ -30,6 +30,7 @@
 // Each stage of the pipeline lives in its own module. They are added to the
 // project one commit at a time; see `docs/` for the matching tutorial chapter.
 
+pub mod css;
 pub mod dom;
 pub mod html;
 
