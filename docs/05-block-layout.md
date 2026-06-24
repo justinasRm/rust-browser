@@ -1,4 +1,4 @@
-# 📐 Chapter 5 — Block layout
+# 📐 Chapter 5 - Block layout
 
 In [the last chapter](04-style-and-the-cascade.md) the cascade told us *what*
 each element looks like: its color, its font, its `width`, its `margin`. But
@@ -8,7 +8,7 @@ actually land on the page. That something is **layout**.
 Layout takes the styled tree and answers two questions for every element:
 **where** does it sit, and **how big** is it? The answer is a tree of
 **boxes**, each carrying a precise rectangle in CSS pixels. This chapter builds
-that tree and runs **block layout** — the rule that block boxes stack top to
+that tree and runs **block layout** - the rule that block boxes stack top to
 bottom, each as wide as its container, growing tall enough to hold its
 children. (Inline boxes and the line-breaking that flows text into wrapped
 lines arrive in a later chapter; here we focus on the blocks.)
@@ -109,7 +109,7 @@ for child in &style_node.children {
 
 Why `effective_display()` and not just `child.display()`? Because the web is
 messy. An inline element like `<a>` or `<center>` can wrap a `<div>` or a
-`<table>` — block-level content — and an inline box has no machinery to lay out
+`<table>` - block-level content - and an inline box has no machinery to lay out
 block children. So we *promote* such an inline box to behave as a block:
 
 ```rust
@@ -123,7 +123,7 @@ fn effective_display(node: &StyledNode) -> Display {
 
 `is_block_level` recurses through nested inlines to find any block-level
 descendant. This is our version of the CSS rule that block-in-inline forces a
-block context — it's exactly what keeps Hacker News from collapsing into a
+block context - it's exactly what keeps Hacker News from collapsing into a
 single line.
 
 ### Width → position → children → height
@@ -143,7 +143,7 @@ fn layout_block(&mut self, containing_block: Dimensions, fonts: &Fonts) {
 ```
 
 **Width and auto margins.** `calculate_block_width` adds up the horizontal
-pieces — both margins, both borders, both paddings, and the width — then
+pieces - both margins, both borders, both paddings, and the width - then
 compares the total to the container width. The leftover is the *underflow*, and
 a single `match` decides who absorbs it. `Auto` width fills the gap; two `auto`
 margins split it evenly (this is how `margin: 0 auto` centers a box):
@@ -165,8 +165,8 @@ match (width == Auto, margin_left == Auto, margin_right == Auto) {
 **Position and stacking.** `calculate_block_position` reads the vertical
 margins/borders/paddings, then places the box. The horizontal `x` is the
 container's left edge plus the left rings. The vertical `y` is the clever bit:
-it adds the container's *running content height* — how much its children have
-already consumed — so each block lands just below the previous one:
+it adds the container's *running content height* - how much its children have
+already consumed - so each block lands just below the previous one:
 
 ```rust
 d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
@@ -218,7 +218,7 @@ resolve identically and exactly.
   into a local *before* the loop rather than borrowing `self` inside it.
 - **`Copy` types pay off.** `Rect`, `EdgeSizes`, and `Dimensions` all derive
   `Copy`, so passing a `containing_block` by value or snapshotting dimensions is
-  a cheap bitwise copy — no clones, no borrow gymnastics.
+  a cheap bitwise copy - no clones, no borrow gymnastics.
 - **Lifetimes on `LayoutBox<'a>`.** A box holds `&'a StyledNode<'a>` rather than
   owning its style, so the styled tree must outlive the layout tree. That's why
   the tests build both in the same scope and never return a `LayoutBox` past the
@@ -263,7 +263,7 @@ the two `auto` margins; the second div has `auto` width, so it fills the whole
 
 1. **`min-width` / `max-width`.** After `resolve_width` produces a width, clamp
    it so a `min-width` raises it and a `max-width` lowers it. Re-run the
-   underflow `match` afterward — clamping changes the leftover space the auto
+   underflow `match` afterward - clamping changes the leftover space the auto
    margins divide.
 
 2. **`box-sizing: border-box`.** Today `width` sets the *content* width. When a
@@ -277,7 +277,7 @@ the two `auto` margins; the second div has `auto` width, so it fills the whole
 
 4. **A `max-width` clamp on the root.** Real sites cap their content with
    something like `max-width: 960px; margin: 0 auto`. Confirm that exercise 1
-   plus the existing auto-margin centering reproduce this for a top-level box —
+   plus the existing auto-margin centering reproduce this for a top-level box -
    write a test asserting the box is 960 wide and horizontally centered in a
    1400px viewport.
 

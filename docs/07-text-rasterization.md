@@ -1,7 +1,7 @@
-# ✍️ Chapter 7 — Text rasterization
+# ✍️ Chapter 7 - Text rasterization
 
 Up to now every box has been a solid rectangle. That got us backgrounds, borders,
-and list bullets — but look at any real web page and you'll notice the obvious: it's
+and list bullets - but look at any real web page and you'll notice the obvious: it's
 mostly **text**. Headings, paragraphs, links, code. Drawing text is its own small
 world, and this chapter is where we enter it.
 
@@ -12,8 +12,8 @@ grayscale bitmaps, and those gray edges are exactly what makes text look smooth
 instead of jagged.
 
 All of this lives in [`src/text.rs`](../src/text.rs). We lean on the
-[`fontdue`](https://crates.io/crates/fontdue) crate for the genuinely hard part —
-decoding TrueType outlines and turning curves into pixels — and we focus on wiring
+[`fontdue`](https://crates.io/crates/fontdue) crate for the genuinely hard part -
+decoding TrueType outlines and turning curves into pixels - and we focus on wiring
 it into Robin's canvas.
 
 ## The idea
@@ -23,35 +23,35 @@ head:
 
 - **Measuring** answers "how wide is this string?" Layout needs this *before* it
   draws anything, so it can decide where lines wrap and how wide a paragraph is.
-  Measuring touches no pixels — it just sums up advances.
+  Measuring touches no pixels - it just sums up advances.
 - **Drawing** is the paint-time job: rasterize each glyph and blend it onto the
   canvas.
 
 ### Coverage bitmaps and anti-aliasing
 
-When you ask fontdue to rasterize a character, you get back a flat array of bytes —
-one per pixel — called a **coverage bitmap**. Each byte (0–255) says *how much* of
+When you ask fontdue to rasterize a character, you get back a flat array of bytes -
+one per pixel - called a **coverage bitmap**. Each byte (0-255) says *how much* of
 that pixel the glyph covers: `0` is "not touched", `255` is "fully inside the
 letter", and the values in between live along the curved and diagonal edges where a
 pixel is only partly covered.
 
 We treat coverage as **alpha**. A half-covered edge pixel blends halfway between the
 text color and the background, which is what gives smooth, **anti-aliased** edges
-instead of the staircase you'd get from a hard on/off test. No special magic — the
+instead of the staircase you'd get from a hard on/off test. No special magic - the
 gray values fall straight out of the rasterizer, and we just feed them to the same
 alpha-blending math from Chapter 6.
 
 ### The baseline
 
-Fonts aren't positioned by their top-left corner; they hang from a **baseline** —
+Fonts aren't positioned by their top-left corner; they hang from a **baseline** -
 the line the bottoms of most letters sit on. Two numbers describe how a line of text
 relates to that baseline:
 
-- **ascent** — how far the tallest glyphs rise *above* the baseline.
-- **descent** — how far descenders (the tails of `g`, `p`, `y`) drop *below* it.
+- **ascent** - how far the tallest glyphs rise *above* the baseline.
+- **descent** - how far descenders (the tails of `g`, `p`, `y`) drop *below* it.
 
 Each individual glyph also reports where its bitmap sits relative to the pen and the
-baseline (`xmin`, `ymin`, `height`) plus an `advance_width` — how far to move the
+baseline (`xmin`, `ymin`, `height`) plus an `advance_width` - how far to move the
 pen before the next character. We'll use all of these in `draw_run`.
 
 ### Why bundle the fonts
@@ -86,7 +86,7 @@ pub struct Fonts {
 
 `bundled()` parses each one. Parsing a TTF isn't free, so we do it a single time at
 startup and pass `&Fonts` around. Notice it returns a `Result` rather than panicking
-— in practice the bytes always parse (they shipped with the binary), but surfacing
+- in practice the bytes always parse (they shipped with the binary), but surfacing
 an error is tidier than an `unwrap` deep in the rendering path:
 
 ```rust
@@ -121,7 +121,7 @@ fn face(&self, bold: bool, italic: bool, monospace: bool) -> &Font {
 ### Measuring
 
 `char_advance` asks the font for one character's `advance_width`; `measure` sums
-those advances across a whole string. This is the measuring path — no rasterization,
+those advances across a whole string. This is the measuring path - no rasterization,
 no pixels:
 
 ```rust
@@ -198,7 +198,7 @@ fn blit_coverage(canvas, coverage, width, height, left, top, color) {
 ```
 
 `blend_pixel` (back in `src/render.rs`) does straight alpha blending of that
-semi-transparent color over whatever was already on the canvas — the same routine
+semi-transparent color over whatever was already on the canvas - the same routine
 that powers `fill_rect`. Skipping `cov == 0` pixels is a small but real speedup:
 glyph bitmaps are mostly empty space.
 
@@ -213,7 +213,7 @@ glyph bitmaps are mostly empty space.
   a single time and pass shared references through painting. The type owns the parsed
   `Font`s; everyone else borrows.
 - **`Result` over `panic`.** `bundled()` returns `Result<Fonts, String>` so a parse
-  failure propagates cleanly with `?` instead of crashing — good habit even when the
+  failure propagates cleanly with `?` instead of crashing - good habit even when the
   failure is "impossible".
 - **Float vs. integer coordinates.** Layout works in `f32` (sub-pixel positions), but
   pixels are integers. `blit_coverage` rounds at the last moment with `.round() as
@@ -229,7 +229,7 @@ cargo test text
 
 You'll see the font load and measure, the line metrics come out sensible, and a
 drawn run actually deposit dark pixels on a white canvas. More fun: text now shows up
-in **any** rendered PNG from the earlier chapters — re-run an example and the boxes
+in **any** rendered PNG from the earlier chapters - re-run an example and the boxes
 finally have words in them.
 
 ## Exercises

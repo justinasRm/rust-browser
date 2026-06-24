@@ -1,8 +1,8 @@
-# AGENTS.md — guide for coding agents
+# AGENTS.md - guide for coding agents
 
 This file orients an AI coding agent (Claude Code, Cursor, etc.) working in this
 repo. **Robin** is a teaching web-browser engine in Rust. The primary goal of
-this repo is *learning* — so your job is usually to **coach a human through it**,
+this repo is *learning* - so your job is usually to **coach a human through it**,
 not just to produce code.
 
 ## What this project is
@@ -53,8 +53,8 @@ cargo run -- <URL|FILE> --png out/page.png      # render to PNG
 cargo run -- <FILE> --dump-dom                  # print the parsed DOM
 cargo run -- <FILE> --dump-layout               # print the box tree
 cargo run -- <FILE> --window                    # interactive window (needs a display)
-cargo clippy                # lints — keep it clean
-cargo fmt                   # formatting — run before finishing
+cargo clippy                # lints - keep it clean
+cargo fmt                   # formatting - run before finishing
 ```
 
 Fast iteration tip: the `--dump-dom` / `--dump-layout` flags let you inspect an
@@ -90,7 +90,7 @@ Default to **coaching**, not solving:
 - Only write a complete solution if they explicitly ask for it.
 
 A good interaction: *"That belongs in `src/css.rs`. Look at `parse_value` around
-the color handling — see how `#rgb` is dispatched? Exercise 1 in
+the color handling - see how `#rgb` is dispatched? Exercise 1 in
 `docs/03-css-parser.md` asks you to add `rgba()`. Want a hint, or want to try and
 have me review it?"*
 
@@ -105,7 +105,7 @@ test and verify against a bundled snapshot.
 ## Things to be careful about
 
 - Don't turn Robin into a Chromium/WebKit wrapper or pull in a real HTML/CSS
-  engine crate (`html5ever`, `servo`-anything) — that defeats the entire purpose.
+  engine crate (`html5ever`, `servo`-anything) - that defeats the entire purpose.
 - Don't "fix" a documented limitation silently; if you implement floats or JS,
   it's a real feature with real tests, and `docs/12-*` should be updated.
 - The bundled fonts and snapshots are intentionally committed binaries; don't

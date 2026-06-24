@@ -30,14 +30,14 @@ path = "src/main.rs"
 # codec, so we switch off image's many default formats.
 image = { version = "0.25", default-features = false, features = ["png"] }
 # Text: rasterize TrueType glyphs to anti-aliased coverage bitmaps. Pure Rust,
-# no system font dependencies — the fonts themselves are bundled in assets/.
+# no system font dependencies - the fonts themselves are bundled in assets/.
 fontdue = "0.9"
 # Networking: a small blocking HTTP/HTTPS client (rustls TLS, gzip) for fetching
 # live pages, plus URL parsing to resolve relative links like <link href>.
 ureq = { version = "2", features = ["tls", "gzip"] }
 url = "2"
 # Interactive window: open a real OS window and push our pixel buffer to it, with
-# keyboard/scroll input. A thin cross-platform framebuffer — no GUI toolkit.
+# keyboard/scroll input. A thin cross-platform framebuffer - no GUI toolkit.
 minifb = "0.27"
 
 # Used only by `examples/make_gif.rs` to encode the demo animation.

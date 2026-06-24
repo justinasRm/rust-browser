@@ -1,19 +1,19 @@
-//! Text rasterization — turning characters into pixels.
+//! Text rasterization - turning characters into pixels.
 //!
 //! Up to now every box has been a solid rectangle. Real pages are mostly *text*,
 //! and drawing text is its own small world: load a font, ask it for the shape of
 //! each character at a given size, and blend that shape (a grayscale *coverage*
 //! bitmap, which is what gives us smooth anti-aliased edges) onto the canvas.
 //!
-//! We lean on [`fontdue`] for the hard part — decoding TrueType outlines and
-//! rasterizing them — and bundle the DejaVu fonts directly into the binary with
+//! We lean on [`fontdue`] for the hard part - decoding TrueType outlines and
+//! rasterizing them - and bundle the DejaVu fonts directly into the binary with
 //! `include_bytes!`, so Robin renders identically on any machine with no system
 //! fonts required.
 //!
 //! Two jobs live here:
 //!
-//! * **Measuring** — how wide is this string? Layout needs this to wrap lines.
-//! * **Drawing** — blit each glyph at the right place in the right color.
+//! * **Measuring** - how wide is this string? Layout needs this to wrap lines.
+//! * **Drawing** - blit each glyph at the right place in the right color.
 
 use fontdue::{Font, FontSettings};
 
@@ -40,8 +40,8 @@ pub struct Fonts {
 }
 
 impl Fonts {
-    /// Parse the bundled fonts. Infallible in practice — the bytes ship with the
-    /// binary — but we surface an error rather than panic, just in case.
+    /// Parse the bundled fonts. Infallible in practice - the bytes ship with the
+    /// binary - but we surface an error rather than panic, just in case.
     pub fn bundled() -> Result<Fonts, String> {
         let load = |bytes| Font::from_bytes(bytes, FontSettings::default()).map_err(String::from);
         Ok(Fonts {
@@ -133,7 +133,7 @@ pub struct LineMetrics {
 }
 
 /// Blend a glyph's coverage bitmap onto the canvas in a solid color. Each byte
-/// of `coverage` (0–255) becomes the glyph's alpha at that pixel — that's what
+/// of `coverage` (0-255) becomes the glyph's alpha at that pixel - that's what
 /// produces smooth, anti-aliased edges instead of jagged ones.
 fn blit_coverage(
     canvas: &mut Canvas,

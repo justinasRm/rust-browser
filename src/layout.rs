@@ -1,8 +1,8 @@
-//! Layout — deciding where every box goes and how big it is.
+//! Layout - deciding where every box goes and how big it is.
 //!
 //! Style told us *what* each element looks like; layout decides *where* it sits
 //! and *how large* it is. The unit of layout is the **box**, and every box has
-//! four nested rectangles — the **box model**:
+//! four nested rectangles - the **box model**:
 //!
 //! ```text
 //!   ┌─────────────── margin ───────────────┐
@@ -17,7 +17,7 @@
 //! This module builds a **layout tree** from the styled tree and runs **block
 //! layout**: block boxes stack top to bottom, each as wide as its container,
 //! growing tall enough to hold its children. (Inline boxes and text flow arrive
-//! once we can measure glyphs — see the text chapter.)
+//! once we can measure glyphs - see the text chapter.)
 //!
 //! The algorithm follows Matt Brubeck's *robinson*: compute a block's width from
 //! its container, then its position, then lay out its children to discover its
@@ -72,11 +72,11 @@ impl Dimensions {
     pub fn padding_box(self) -> Rect {
         self.content.expanded_by(self.padding)
     }
-    /// The padding box plus border — i.e. the visible box edge.
+    /// The padding box plus border - i.e. the visible box edge.
     pub fn border_box(self) -> Rect {
         self.padding_box().expanded_by(self.border)
     }
-    /// The border box plus margin — the space the box reserves in flow.
+    /// The border box plus margin - the space the box reserves in flow.
     pub fn margin_box(self) -> Rect {
         self.border_box().expanded_by(self.margin)
     }
@@ -173,7 +173,7 @@ pub fn build_layout_tree<'a>(style_node: &'a StyledNode<'a>) -> LayoutBox<'a> {
 
 /// The display value a box should *behave* as. An inline element that contains
 /// block-level descendants (e.g. `<center><table>…` on Hacker News, or
-/// `<a><div>…`) has to become a block itself — an inline box can't lay out block
+/// `<a><div>…`) has to become a block itself - an inline box can't lay out block
 /// children. This is the engine's version of the CSS rule that block-in-inline
 /// forces anonymous block wrappers.
 fn effective_display(node: &StyledNode) -> Display {
@@ -634,7 +634,7 @@ impl LengthOrAuto {
 /// Absolute units become pixels; `%` and `vw` are taken as a fraction of the
 /// container's width (for top-level boxes the container *is* the viewport, so
 /// `vw` is exact; nested `vw` is approximated, which is fine for our pages).
-/// Everything else — `auto`, `vh`, a missing value — means "auto".
+/// Everything else - `auto`, `vh`, a missing value - means "auto".
 fn resolve_width(style: &StyledNode, cb_width: f32) -> LengthOrAuto {
     use crate::css::{Unit, Value};
     match style.value("width") {
@@ -668,7 +668,7 @@ fn lookup_len(style: Option<&StyledNode>, names: &[&str], default: &LengthOrAuto
     *default
 }
 
-/// Render the layout tree as indented text — handy for tests and `--dump-layout`.
+/// Render the layout tree as indented text - handy for tests and `--dump-layout`.
 pub fn box_tree_to_string(root: &LayoutBox) -> String {
     let mut out = String::new();
     print_box(root, 0, &mut out);

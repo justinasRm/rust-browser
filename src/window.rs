@@ -1,8 +1,8 @@
 //! An interactive, scrollable window.
 //!
 //! Saving a PNG is great for tests and screenshots, but a browser is something
-//! you *scroll*. This module opens a real OS window with [`minifb`] — a tiny
-//! cross-platform framebuffer, not a GUI toolkit — and presents the rendered
+//! you *scroll*. This module opens a real OS window with [`minifb`] - a tiny
+//! cross-platform framebuffer, not a GUI toolkit - and presents the rendered
 //! page in it.
 //!
 //! The trick is simple: we render the whole page once into a tall [`Canvas`]

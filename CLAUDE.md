@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 This repo is a teaching web-browser engine in Rust. All guidance for AI coding
-agents — the codebase map, build/test commands, conventions, and (importantly)
-how to **coach a human learner rather than just hand over answers** — lives in
+agents - the codebase map, build/test commands, conventions, and (importantly)
+how to **coach a human learner rather than just hand over answers** - lives in
 [`AGENTS.md`](AGENTS.md). Please read it first.
 
 Quick reference:
@@ -14,5 +14,5 @@ Quick reference:
   paint/render`, with `text`, `net`, `window` alongside). The git history and
   `docs/` chapters follow the same order.
 - Default to **coaching**: explain, point at the relevant `docs/NN-*.md` chapter
-  and `src/<file>.rs`, and give the next hint — write full solutions only when
+  and `src/<file>.rs`, and give the next hint - write full solutions only when
   asked.

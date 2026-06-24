@@ -1,4 +1,4 @@
-//! # Robin — a tiny web browser engine, built from scratch in Rust
+//! # Robin - a tiny web browser engine, built from scratch in Rust
 //!
 //! Robin is a teaching browser engine. It is **not** a wrapper around Chromium
 //! or WebKit: every stage of the rendering pipeline is implemented here in

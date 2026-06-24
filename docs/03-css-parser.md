@@ -1,4 +1,4 @@
-# 🎨 Chapter 3 — The CSS parser
+# 🎨 Chapter 3 - The CSS parser
 
 In Chapter 2 we turned HTML text into a tree of nodes. Now we do the same for
 CSS. A stylesheet is, at heart, a flat **list of rules**, and each rule is two
@@ -8,7 +8,7 @@ string of CSS and hand back those structures so a later stage (the cascade) can
 match them against the document.
 
 We keep the model deliberately small. It is enough to drive a built-in
-user-agent stylesheet and the common author rules on the pages we render — and
+user-agent stylesheet and the common author rules on the pages we render - and
 nothing more.
 
 ## The idea
@@ -23,12 +23,12 @@ It has **two selectors** (`a.story` and `h1`) separated by a comma, and a block
 of **two declarations** (`color: #ff6600` and `font-weight: bold`). That shape
 maps almost directly onto our types:
 
-- `Stylesheet` — a `Vec<Rule>`.
-- `Rule` — a `Vec<Selector>` plus a `Vec<Declaration>`.
-- `Selector` — an enum with one variant, `Selector::Simple(SimpleSelector)`.
-- `SimpleSelector` — an optional `tag_name`, an optional `id`, and a `Vec` of
+- `Stylesheet` - a `Vec<Rule>`.
+- `Rule` - a `Vec<Selector>` plus a `Vec<Declaration>`.
+- `Selector` - an enum with one variant, `Selector::Simple(SimpleSelector)`.
+- `SimpleSelector` - an optional `tag_name`, an optional `id`, and a `Vec` of
   `classes`.
-- `Declaration` — a `name` string and a `Value`.
+- `Declaration` - a `name` string and a `Value`.
 
 A `Value` is one of three shapes the rest of the engine cares about:
 `Value::Keyword(String)` (like `bold`), `Value::Length(f32, Unit)` (like
@@ -36,19 +36,19 @@ A `Value` is one of three shapes the rest of the engine cares about:
 `Percent`, `Vw`, and `Vh`. `Color` is plain 8-bit-per-channel RGBA.
 
 **Specificity** is how the cascade breaks ties when two rules touch the same
-property. We model it as the tuple `(usize, usize, usize)` — read it as
+property. We model it as the tuple `(usize, usize, usize)` - read it as
 `(#id, #class, #tag)`. Higher wins. A `*` and a bare declaration count for
 nothing. `Selector::specificity()` builds the tuple by counting: one for an id
 if present, one per class, one for a tag name if present.
 
 **Tolerant parsing.** Like the HTML parser, this one never aborts on bad input.
-An `@media` block, an `@import`, a malformed rule, an exotic value — each is
+An `@media` block, an `@import`, a malformed rule, an exotic value - each is
 skipped, and parsing continues with the next thing it understands.
 
 **We drop combinators and pseudo-selectors on purpose.** We only model *simple*
-selectors. When the parser sees something it can't represent — a descendant
+selectors. When the parser sees something it can't represent - a descendant
 combinator (`.nav a`), a child combinator (`article > p`), a pseudo
-(`a:hover`), an attribute selector (`a[x]`) — it **throws the whole selector
+(`a:hover`), an attribute selector (`a[x]`) - it **throws the whole selector
 away** rather than salvaging the simple pieces. Why? Because keeping the bare
 `a` out of `.nav a` would mean styling *every* `<a>` on the page, not just the
 ones inside `.nav`. Matching nothing is safe; mis-matching is a visible bug.
@@ -72,7 +72,7 @@ selectors).
 ### Rules, and skipping at-rules
 
 `parse_rules` loops until end of input. The one special case is `@`, which
-means an at-rule we don't model — so we skip it wholesale and move on:
+means an at-rule we don't model - so we skip it wholesale and move on:
 
 ```rust
 if self.next_char() == '@' {
@@ -102,8 +102,8 @@ match (parsed, self.next_char()) {
 ```
 
 A simple selector is only *kept* if the very next non-space character is a comma
-or the opening brace. If anything else follows — a space (`a b`), a `>`, a `:`,
-a `[` — then this was part of a complex selector we don't model, so we skip
+or the opening brace. If anything else follows - a space (`a b`), a `>`, a `:`,
+a `[` - then this was part of a complex selector we don't model, so we skip
 ahead to the next `,` or `{` and discard it. This is exactly the "drop, don't
 mis-apply" rule from above.
 
@@ -115,8 +115,8 @@ selectors.sort_by(|a, b| b.specificity().cmp(&a.specificity()));
 
 ### A single simple selector
 
-`parse_simple_selector` loops over the selector's pieces — `#id`, `.class`, the
-universal `*`, and a tag name — until it hits something that isn't a selector
+`parse_simple_selector` loops over the selector's pieces - `#id`, `.class`, the
+universal `*`, and a tag name - until it hits something that isn't a selector
 character:
 
 ```rust
@@ -154,7 +154,7 @@ match self.next_char() {
 
 `parse_hex` handles `#rgb`, `#rrggbb`, and `#rrggbbaa`. `parse_color_function`
 handles `rgb(...)` and `rgba(...)`, splitting the arguments on commas, spaces,
-and `/` and tolerating `%` suffixes. `named_color` is a small lookup table —
+and `/` and tolerating `%` suffixes. `named_color` is a small lookup table -
 `black`, `white`, `red`, `navy`, `orange`, `transparent`, and a couple dozen
 more that our pages actually use.
 
@@ -165,8 +165,8 @@ failing.
 ### Lengths in pixels
 
 `to_px()` resolves a length to device pixels. Note that `pt` is converted at
-96/72, and `em`/`rem` are resolved against a fixed 16px base — this simple model
-doesn't track inherited font-size — while percentages and keywords return 0
+96/72, and `em`/`rem` are resolved against a fixed 16px base - this simple model
+doesn't track inherited font-size - while percentages and keywords return 0
 because they aren't absolute lengths:
 
 ```rust
@@ -191,7 +191,7 @@ fn bump(&mut self) {
 }
 ```
 
-`input` is a `&str`, which is UTF-8. A character like `—` or `·` takes more than
+`input` is a `&str`, which is UTF-8. A character like `-` or `·` takes more than
 one byte. If we advanced one byte at a time we could land in the middle of a
 character, and the next slice (`self.input[self.pos..]`) would panic on a
 non-boundary. `len_utf8()` keeps the cursor on a clean boundary no matter what
@@ -199,7 +199,7 @@ the stylesheet contains.
 
 ## Rust notes
 
-- **Enums model "one of a few shapes."** `Value` and `Unit` are sum types — a
+- **Enums model "one of a few shapes."** `Value` and `Unit` are sum types - a
   value *is* exactly one of keyword/length/color, and the compiler forces every
   `match` to handle each case. That's safer than a struct full of `Option`s.
 - **`#[derive(PartialEq)]`** on every type is what lets the tests write
@@ -220,7 +220,7 @@ cargo test css
 
 The test module exercises multi-selector rules, specificity ordering, units,
 all three color forms, skipped at-rules and comments, recovery from malformed
-rules, and — importantly — that complex selectors are dropped rather than
+rules, and - importantly - that complex selectors are dropped rather than
 misread.
 
 ## Exercises
@@ -235,7 +235,7 @@ misread.
    `Declaration`, and decide how it should outrank ordinary specificity. (You'll
    touch the cascade in the next chapter too.)
 
-3. **Add a `Unit`.** Pick a real unit we don't handle — say `ch` or `ex` — add
+3. **Add a `Unit`.** Pick a real unit we don't handle - say `ch` or `ex` - add
    it to the `Unit` enum, wire it into `parse_length`, and give it a sensible
    `to_px()` conversion. Notice how the compiler's exhaustive `match` checks
    point you at every place that needs updating.

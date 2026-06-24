@@ -1,10 +1,10 @@
-//! The DOM — the tree a browser builds out of HTML.
+//! The DOM - the tree a browser builds out of HTML.
 //!
 //! Everything downstream (CSS matching, layout, painting) walks this tree, so it
 //! is the foundation of the whole engine. A document is just a [`Node`], and
 //! every node is one of three things: an **element** (`<p>`, `<a>`, …), a run of
 //! **text**, or a **comment**. Elements carry a tag name and a bag of
-//! attributes, and any node can have children — that recursion is what makes it
+//! attributes, and any node can have children - that recursion is what makes it
 //! a tree.
 //!
 //! We keep the data model deliberately small. A real browser's DOM has dozens of
@@ -19,7 +19,7 @@ pub type AttrMap = HashMap<String, String>;
 /// A single node in the document tree.
 ///
 /// Children are stored inline (`Vec<Node>`) rather than behind pointers. That
-/// keeps ownership simple — a parent owns its children — which is exactly the
+/// keeps ownership simple - a parent owns its children - which is exactly the
 /// kind of clear ownership Rust makes pleasant to work with. A production
 /// browser needs parent pointers and shared mutability (so JavaScript can poke
 /// at nodes), but for a render-only engine a plain tree is all we need.

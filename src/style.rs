@@ -1,4 +1,4 @@
-//! Style — turning the DOM + CSS into a **styled tree**.
+//! Style - turning the DOM + CSS into a **styled tree**.
 //!
 //! This is "the cascade". For every element we figure out the final value of
 //! each CSS property by:
@@ -16,8 +16,8 @@
 //! read without thinking about selectors ever again.
 //!
 //! A built-in **user-agent stylesheet** ([`user_agent_stylesheet`]) supplies the
-//! defaults every browser ships — which elements are blocks, default margins,
-//! heading sizes, link colors — so even completely unstyled HTML lays out in a
+//! defaults every browser ships - which elements are blocks, default margins,
+//! heading sizes, link colors - so even completely unstyled HTML lays out in a
 //! recognizable way.
 
 use std::collections::HashMap;

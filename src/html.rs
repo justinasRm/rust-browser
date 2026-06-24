@@ -4,7 +4,7 @@
 //! elements are mis-nested, attributes go unquoted, and `<script>` bodies
 //! contain things that look like tags but aren't. A parser that only accepts
 //! perfectly-formed XML would choke on every page on the web. So, like real
-//! browsers, ours never errors out — it does its best and keeps going.
+//! browsers, ours never errors out - it does its best and keeps going.
 //!
 //! The design is a **tokenizer** feeding a **tree builder**:
 //!
@@ -15,7 +15,7 @@
 //!   mis-nested in between). A handful of "implied end tag" rules let optional
 //!   closing tags work the way they do on real pages.
 //!
-//! This is a pragmatic subset of the HTML5 parsing algorithm — enough to render
+//! This is a pragmatic subset of the HTML5 parsing algorithm - enough to render
 //! Hacker News and Wikipedia, small enough to read in one sitting.
 
 use crate::dom::{self, AttrMap, Node};
@@ -185,7 +185,7 @@ impl<'a, 'b> Tokenizer<'a, 'b> {
             if self.starts_with("<!--") {
                 self.parse_comment();
             } else if self.starts_with("<!") || self.starts_with("<?") {
-                // Doctype or processing instruction — skip to the next '>'.
+                // Doctype or processing instruction - skip to the next '>'.
                 self.skip_until_byte(b'>');
             } else if self.starts_with("</") {
                 self.parse_end_tag();
@@ -397,7 +397,7 @@ impl<'a, 'b> Tokenizer<'a, 'b> {
     }
 
     /// Byte-wise prefix check. Safe at *any* position, including the middle of a
-    /// multibyte UTF-8 character — unlike slicing `self.chars`, which would
+    /// multibyte UTF-8 character - unlike slicing `self.chars`, which would
     /// panic. Used by the scans that walk one byte at a time.
     fn starts_with_bytes(&self, needle: &[u8]) -> bool {
         self.input[self.pos..].starts_with(needle)
@@ -472,7 +472,7 @@ fn decode_one_entity(entity: &str) -> Option<String> {
         };
         return char::from_u32(code).map(String::from);
     }
-    // A small named table — the entities that actually appear in page text.
+    // A small named table - the entities that actually appear in page text.
     let s = match entity {
         "amp" => "&",
         "lt" => "<",
@@ -573,7 +573,7 @@ mod tests {
 
     #[test]
     fn multibyte_in_script_and_comments_does_not_panic() {
-        // Bytes of '·' and '—' must never be sliced mid-character.
+        // Bytes of '·' and '-' must never be sliced mid-character.
         let dom = parse("<style>/* π · ½ — */ a{}</style><!-- café · résumé --><p>after·text</p>");
         assert!(dom.inner_text().contains("after·text"));
     }

@@ -1,7 +1,7 @@
 //! Build a self-contained offline snapshot of a web page.
 //!
 //! Real pages keep their CSS in separate files. To render a page offline (and
-//! reproducibly — live sites change), we fetch the page plus every linked
+//! reproducibly - live sites change), we fetch the page plus every linked
 //! stylesheet and inline the CSS into a single `<style>` block. The resulting
 //! HTML renders the same way forever, with no network access.
 //!

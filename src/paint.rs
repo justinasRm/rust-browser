@@ -1,8 +1,8 @@
-//! Painting — turning the laid-out box tree into drawing commands, then pixels.
+//! Painting - turning the laid-out box tree into drawing commands, then pixels.
 //!
 //! Browsers don't draw straight from the layout tree. They first flatten it into
 //! a **display list**: a simple, ordered list of "draw this rectangle here, in
-//! this color" commands. That indirection is useful — the list is easy to
+//! this color" commands. That indirection is useful - the list is easy to
 //! reason about, easy to test, and (in a real browser) easy to replay on the GPU
 //! or hand to a different thread.
 //!
@@ -157,7 +157,7 @@ fn background_color(layout_box: &LayoutBox) -> Option<Color> {
     color_property(style, &["background-color", "background"])
 }
 
-/// The element's border color — explicit, else the text color, if it has a
+/// The element's border color - explicit, else the text color, if it has a
 /// visible border at all.
 fn border_color(layout_box: &LayoutBox) -> Option<Color> {
     let b = &layout_box.dimensions.border;

@@ -114,7 +114,7 @@ fn main() -> ExitCode {
         Mode::Window => {
             // The window scrolls, so it always shows the full page.
             let canvas = paint_page(&layout_root, &fonts, opts.width);
-            let title = format!("robin — {}", opts.target);
+            let title = format!("robin - {}", opts.target);
             match robin::window::show(&canvas, &title) {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(e) => {
@@ -221,7 +221,7 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
 
 fn print_usage() {
     println!(
-        "robin {} — a tiny browser engine you build from scratch\n\
+        "robin {} - a tiny browser engine you build from scratch\n\
          \n\
          USAGE:\n    \
              robin <URL|FILE> [options]\n\

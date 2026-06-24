@@ -1,9 +1,9 @@
-//! The pixel canvas — where boxes finally become pixels.
+//! The pixel canvas - where boxes finally become pixels.
 //!
 //! A [`Canvas`] is just a flat array of [`Color`]s, `width * height` of them.
 //! Painting fills rectangles into it (with alpha blending, so semi-transparent
 //! colors layer correctly), and at the end we hand the buffer to the `image`
-//! crate to write a PNG — or, later, to a window for display.
+//! crate to write a PNG - or, later, to a window for display.
 //!
 //! This is a *software* rasterizer: no GPU, no graphics API, just arithmetic on
 //! a byte array. That's all a browser's compositor is, underneath.
@@ -48,7 +48,7 @@ impl Canvas {
         }
     }
 
-    /// Blend a single pixel — used by glyph rasterization, where each pixel has
+    /// Blend a single pixel - used by glyph rasterization, where each pixel has
     /// its own coverage/alpha.
     pub fn blend_pixel(&mut self, x: usize, y: usize, color: Color) {
         if x < self.width && y < self.height && color.a > 0 {

@@ -1,12 +1,12 @@
-# 🖌️ Chapter 6 — Painting
+# 🖌️ Chapter 6 - Painting
 
 By now we have a box tree: every element knows its position and size on the
-page. But a box tree isn't an image — you can't look at it. This chapter turns
+page. But a box tree isn't an image - you can't look at it. This chapter turns
 geometry into pixels.
 
 We do it in two steps. First we **flatten** the box tree into a *display list*:
 a flat, ordered list of "draw this rectangle here, in this color" commands.
-Then we **rasterize** that list onto a `Canvas` — a plain array of colors — and
+Then we **rasterize** that list onto a `Canvas` - a plain array of colors - and
 finally hand the buffer to the `image` crate to write a PNG.
 
 Two files do the work: `src/paint.rs` builds and runs the display list, and
@@ -20,7 +20,7 @@ straight to the screen?
 Because the indirection buys us a lot for almost no cost:
 
 - **It's simple.** A command is just `SolidColor(color, rect)` or a run of
-  text. No tree, no recursion, no style lookups — just a flat `Vec` you can
+  text. No tree, no recursion, no style lookups - just a flat `Vec` you can
   iterate top to bottom.
 - **It's testable.** You can build the list and assert on it ("there should be
   one orange rectangle here") without ever touching pixels. Our tests do exactly
@@ -36,7 +36,7 @@ what's already there, so layered colors mix correctly.
 
 And it's all done on the CPU: this is a **software rasterizer**. No GPU, no
 graphics API, just arithmetic on a byte array. That's all a browser's
-compositor is underneath — we've just removed the hardware acceleration.
+compositor is underneath - we've just removed the hardware acceleration.
 
 ## Walking the code
 
@@ -53,10 +53,10 @@ pub enum DisplayCommand {
 }
 ```
 
-`SolidColor` covers backgrounds, borders, and list bullets — anything that's a
+`SolidColor` covers backgrounds, borders, and list bullets - anything that's a
 flat rectangle. `Text` carries a `TextRun` (the string, its position, font size,
 color, and bold/italic/monospace flags). We *emit* text commands here, but
-actually rasterizing glyphs is the next chapter's job — the `TextRun` just keeps
+actually rasterizing glyphs is the next chapter's job - the `TextRun` just keeps
 the display-list shape stable until then.
 
 ### Building it
@@ -71,7 +71,7 @@ pub fn build_display_list(layout_root: &LayoutBox) -> Vec<DisplayCommand> {
 }
 ```
 
-The heart of the walk is `render_layout_box`, and the **order matters** — later
+The heart of the walk is `render_layout_box`, and the **order matters** - later
 commands paint over earlier ones:
 
 ```rust
@@ -93,11 +93,11 @@ CSS paint order, but it gets the common cases right.
 
 `render_background` is a one-liner: if the box has a background color, push a
 `SolidColor` covering its padding box. `render_list_marker` drops a small 5×5
-filled square in the list's left padding — a bullet without any font math.
+filled square in the list's left padding - a bullet without any font math.
 
 ### The four border rects
 
-There's no "draw a rectangle outline" primitive — we only have *filled*
+There's no "draw a rectangle outline" primitive - we only have *filled*
 rectangles. So a border is four thin filled rects, one per edge.
 `render_borders` builds them from the box's `border_box()` and its per-edge
 border widths:
@@ -135,7 +135,7 @@ pub fn new(width: usize, height: usize, background: Color) -> Canvas {
 }
 ```
 
-`fill_rect` is where rectangles become pixels. It does two jobs — **clip** the
+`fill_rect` is where rectangles become pixels. It does two jobs - **clip** the
 rect to the canvas, then **blend** each pixel:
 
 ```rust
@@ -211,19 +211,19 @@ pub fn save_png(&self, path: &str) -> Result<(), String> {
 }
 ```
 
-The `image` crate handles all the PNG encoding — we just hand it the raw bytes
+The `image` crate handles all the PNG encoding - we just hand it the raw bytes
 and the dimensions.
 
 ## Rust notes
 
-- **A `Vec<Color>` is a framebuffer.** No fancy 2-D type — a flat, contiguous
+- **A `Vec<Color>` is a framebuffer.** No fancy 2-D type - a flat, contiguous
   `Vec` is exactly what hardware uses, and it's cache-friendly to scan in row
   order.
 - **`y * width + x` is the row-major index.** Every 2-D pixel access flattens
   to this. Getting it wrong is the classic graphics bug, so it lives in one
   place (`fill_rect` / `blend_pixel`) and nowhere else.
 - **Enums make commands self-describing.** `DisplayCommand` is a closed set, so
-  `paint_list`'s `match` is exhaustive — add a new command variant and the
+  `paint_list`'s `match` is exhaustive - add a new command variant and the
   compiler forces you to handle it.
 - **Clamping with `.min()` / `.max()`** on `f32` is how we clip without
   branches: `rect.x.max(0.0)` and `(...).min(self.width as f32)` keep every
@@ -247,7 +247,7 @@ cargo run -- /tmp/x.html --png /tmp/x.png
 ```
 
 Open `/tmp/x.png` and you should see an orange rectangle with a dark blue
-border on a white page — backgrounds, borders, and the canvas all working
+border on a white page - backgrounds, borders, and the canvas all working
 together.
 
 Run the painting and canvas tests:
@@ -279,7 +279,7 @@ cargo test render   # canvas: clipping doesn't panic, alpha blends halfway
    parent (think `overflow: hidden`). Add an optional clip `Rect` threaded
    through `render_layout_box`, intersect it with each child's box, and pass the
    final clip into `fill_rect` so pixels outside it are skipped. Watch the index
-   math — clipping is just tighter `x0/y0/x1/y1` bounds.
+   math - clipping is just tighter `x0/y0/x1/y1` bounds.
 
 ---
 

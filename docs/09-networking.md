@@ -1,12 +1,12 @@
-# 🌐 Chapter 9 — Networking
+# 🌐 Chapter 9 - Networking
 
 So far our browser has rendered HTML we handed it directly. But a real browser
-starts somewhere more humble: an address bar. You type something — maybe a full
-`https://example.com`, maybe a `file://` URL, maybe just a path on disk — and the
+starts somewhere more humble: an address bar. You type something - maybe a full
+`https://example.com`, maybe a `file://` URL, maybe just a path on disk - and the
 browser's first job is to turn that location into **bytes**.
 
-This chapter builds that step. We fetch the page's text, and — just as
-importantly — we remember the **base URL** it came from. That base URL is what
+This chapter builds that step. We fetch the page's text, and - just as
+importantly - we remember the **base URL** it came from. That base URL is what
 lets us resolve relative links like `../style.css` into something fetchable. All
 of this lives in [`src/net.rs`](../src/net.rs).
 
@@ -46,7 +46,7 @@ of [`fetch_linked_css`](../src/net.rs): walk the DOM, collect every stylesheet
 
 ### Base URL + relative resolution
 
-A stylesheet `href` is usually **relative** — `../style.css`, `/x.css`, or just
+A stylesheet `href` is usually **relative** - `../style.css`, `/x.css`, or just
 `theme.css`. The page's base URL plus the URL-joining rules tell us the real
 address. We lean on the [`url`](https://crates.io/crates/url) crate for this; it
 implements the same resolution rules browsers use.
@@ -60,13 +60,13 @@ down. We don't want one broken file to blank the whole page, so `fetch_linked_cs
 ### Blocking, not async
 
 We use [`ureq`](https://crates.io/crates/ureq), a small **blocking** HTTP client.
-Each fetch runs top to bottom — no async, no executor, no `await`. That keeps the
+Each fetch runs top to bottom - no async, no executor, no `await`. That keeps the
 code readable and easy to follow. A production browser fetches dozens of
 resources concurrently; doing that here is a great later exercise (see below).
 
 ## Walking the code
 
-**`load` — one door for three kinds of location:**
+**`load` - one door for three kinds of location:**
 
 ```rust
 pub fn load(target: &str) -> Result<Resource, String> {
@@ -85,7 +85,7 @@ The `strip_prefix("file://").unwrap_or(target)` is a tidy trick: if the prefix i
 there, drop it; if not, use the string unchanged. Either way we end up with a
 plain path for `read_to_string`.
 
-**`fetch_text` — the actual HTTP call:**
+**`fetch_text` - the actual HTTP call:**
 
 ```rust
 pub fn fetch_text(url: &str) -> Result<String, String> {
@@ -108,7 +108,7 @@ We build an `Agent` with sane timeouts and a redirect cap, set a couple of
 request headers (a polite `User-Agent` identifying Robin, and an `Accept` that
 says we want HTML or CSS), then `into_string()` to read the body as text.
 
-**`resolve` — relative href → absolute URL:**
+**`resolve` - relative href → absolute URL:**
 
 ```rust
 pub fn resolve(base: &str, href: &str) -> Option<String> {
@@ -121,7 +121,7 @@ So `resolve("https://a.com/x/y.html", "../style.css")` gives
 `Some("https://a.com/style.css")`. If the base won't parse or the join fails, we
 get `None` and the caller skips that link.
 
-**`fetch_linked_css` + `collect_stylesheet_hrefs` — gather the CSS:**
+**`fetch_linked_css` + `collect_stylesheet_hrefs` - gather the CSS:**
 
 ```rust
 pub fn fetch_linked_css(dom: &Node, base_url: &str) -> String {
@@ -146,7 +146,7 @@ checks for `<link>` with a `rel` containing `stylesheet` (handling values like
 `"preload stylesheet"` by splitting on whitespace), and if so records the `href`.
 Then it recurses into the children. Note the two nested `if let`s in
 `fetch_linked_css`: a failed `resolve` *or* a failed `fetch_text` quietly skips
-that stylesheet — exactly the tolerant behaviour we wanted.
+that stylesheet - exactly the tolerant behaviour we wanted.
 
 ### How the CLI combines linked + inline CSS
 
@@ -162,7 +162,7 @@ combined CSS to the style engine before laying the page out.
 a different purpose: building a **reproducible offline page**. It fetches the HTML
 and every linked stylesheet, then inlines all the CSS into a single `<style>`
 block injected into `<head>`. The result renders identically forever, with no
-network access — which is exactly what you want for the test fixtures in
+network access - which is exactly what you want for the test fixtures in
 `assets/snapshots/`.
 
 ## Rust notes
@@ -180,8 +180,8 @@ network access — which is exactly what you want for the test fixtures in
 - **`&Node` tree walking.** `collect_stylesheet_hrefs` takes `&Node` and recurses
   over `&node.children`, pushing into a `&mut Vec<String>`. Borrowing the tree
   immutably while mutating a separate output buffer is a common, friendly pattern.
-- **External crates.** We pull in two small crates — `ureq` (blocking HTTP) and
-  `url` (parsing and joining) — rather than hand-rolling either. Both are listed
+- **External crates.** We pull in two small crates - `ureq` (blocking HTTP) and
+  `url` (parsing and joining) - rather than hand-rolling either. Both are listed
   in `Cargo.toml`.
 
 ## Try it
@@ -205,7 +205,7 @@ cargo run --example snapshot -- https://example.com /tmp/ex.html
 ```
 
 Open `/tmp/ex.html` in any browser, or feed it back to Robin with
-`cargo run -- /tmp/ex.html --png /tmp/ex2.png` — it renders with no network at all.
+`cargo run -- /tmp/ex.html --png /tmp/ex2.png` - it renders with no network at all.
 
 ## Exercises
 

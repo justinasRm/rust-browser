@@ -1,4 +1,4 @@
-# 🪟 Chapter 10 — The interactive window
+# 🪟 Chapter 10 - The interactive window
 
 So far Robin has been a one-shot machine: feed it HTML, get a PNG back. That's
 perfect for tests and screenshots, but it's not how anyone *uses* a browser. A
@@ -6,7 +6,7 @@ browser is something you **scroll**. You point it at a page that's taller than
 your screen, and you drag, swipe, or arrow-key your way down it.
 
 In this chapter we open a real operating-system window and present the rendered
-page inside it — scrollable, until you close it. The whole thing lives in
+page inside it - scrollable, until you close it. The whole thing lives in
 [`src/window.rs`](../src/window.rs) and is barely a hundred lines, because we
 lean on a clever shortcut.
 
@@ -15,7 +15,7 @@ lean on a clever shortcut.
 We use a crate called [`minifb`](https://crates.io/crates/minifb). The name
 stands for "mini framebuffer", and that's exactly what it is: a tiny
 cross-platform library that opens a window and lets you hand it a flat array of
-pixels to display. It is **not** a GUI toolkit — there are no buttons, no
+pixels to display. It is **not** a GUI toolkit - there are no buttons, no
 layout, no widgets. Just "here is a rectangle of pixels, draw it." That suits us
 perfectly, because Robin already *has* a rectangle of pixels: the `Canvas` from
 the rendering chapters.
@@ -23,11 +23,11 @@ the rendering chapters.
 The key trick is this:
 
 1. Render the **whole page once** into a tall `Canvas`. The page might be many
-   screens high — that's fine, the canvas can be any height.
+   screens high - that's fine, the canvas can be any height.
 2. Each frame, **copy the slice of rows** the user has scrolled to into a
    smaller window-sized buffer, and show that.
-3. Keyboard and mouse-wheel input just nudge a single number — the **scroll
-   offset** — up or down.
+3. Keyboard and mouse-wheel input just nudge a single number - the **scroll
+   offset** - up or down.
 
 Rendering is the expensive part, and we do it exactly once. Scrolling is then
 just memory-copying rows, which is cheap enough to do at 60 frames per second
@@ -35,7 +35,7 @@ without breaking a sweat.
 
 ## Walking the code
 
-### `show()` — open the window and run the loop
+### `show()` - open the window and run the loop
 
 ```rust
 pub fn show(canvas: &Canvas, title: &str) -> Result<(), String> {
@@ -75,7 +75,7 @@ Next we prepare the pixels:
 ```
 
 `canvas.to_argb_u32()` flattens the canvas into a `Vec<u32>`, one pixel per
-`u32`, packed as `0x00RRGGBB` — minifb's expected format. The top byte (alpha)
+`u32`, packed as `0x00RRGGBB` - minifb's expected format. The top byte (alpha)
 is unused, so it's left at zero. Here's that packing, from `render.rs`:
 
 ```rust
@@ -89,7 +89,7 @@ pub fn to_argb_u32(&self) -> Vec<u32> {
 
 `max_scroll` is the furthest down we can go: any further and we'd be scrolling
 past the bottom of the page. `view` is the window-sized buffer we'll re-fill
-every frame — allocated once, reused forever.
+every frame - allocated once, reused forever.
 
 Then the event loop:
 
@@ -109,7 +109,7 @@ Every iteration is one frame: read input to update `scroll`, copy the visible
 slice into `view`, and hand `view` to the window. The loop runs until the window
 is closed, or the user presses **Escape** or **Q**.
 
-### `apply_input()` — turn key/wheel presses into a new scroll offset
+### `apply_input()` - turn key/wheel presses into a new scroll offset
 
 ```rust
 fn apply_input(window: &Window, scroll: usize, max_scroll: usize, view_h: usize) -> usize {
@@ -149,14 +149,14 @@ A small but complete set of controls:
 - **Down / `j`** scroll one line (48px); **Up / `k`** scroll back up.
 - **PageDown / Space** jump a near-full screen; **PageUp** jumps back.
 - **Home** snaps to the top; **End** to the bottom.
-- The **mouse wheel** via `get_scroll_wheel()` — wheel-up reads positive, and
+- The **mouse wheel** via `get_scroll_wheel()` - wheel-up reads positive, and
   scrolling up should *decrease* the offset, so we subtract.
 
 Everything happens in `i64` (signed) so an "Up" past the top can go negative
 mid-calculation without underflowing. The final `s.clamp(0, max_scroll)` snaps
 it back into the valid range before we cast home to `usize`.
 
-### `blit_view()` — copy the visible rows
+### `blit_view()` - copy the visible rows
 
 ```rust
 fn blit_view(page: &[u32], view: &mut [u32], view_w: usize, view_h: usize, page_h: usize, scroll: usize) {
@@ -180,7 +180,7 @@ instead of reading out of bounds.
 ## Rust notes
 
 - **The event loop is just a `while`.** `window.is_open()` and
-  `is_key_down(..)` are polled each pass — there's no callback machinery, no
+  `is_key_down(..)` are polled each pass - there's no callback machinery, no
   async runtime. minifb's `set_target_fps(60)` paces the loop for us.
 - **One buffer, reused.** `view` is allocated once before the loop with
   `vec![0u32; view_w * view_h]` and refilled in place every frame. No
@@ -231,7 +231,7 @@ A window opens with the rendered page. Controls:
 
 4. **Live reload** *(hard)*. When the source is a local file, watch its
    modification time (or use the `notify` crate). On change, re-parse,
-   re-layout, re-render, and rebuild `page` — so editing the HTML updates the
+   re-layout, re-render, and rebuild `page` - so editing the HTML updates the
    window instantly.
 
 ---

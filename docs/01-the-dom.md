@@ -1,4 +1,4 @@
-# 🌳 Chapter 1 — The DOM
+# 🌳 Chapter 1 - The DOM
 
 The **DOM** (Document Object Model) is the tree a browser builds out of HTML. It is the foundation everything else walks: CSS matching, layout, and painting all read this tree, so before we can parse HTML or draw a pixel, we need a good way to hold a document in memory.
 
@@ -6,9 +6,9 @@ The **DOM** (Document Object Model) is the tree a browser builds out of HTML. It
 
 A document is a tree of **nodes**, and in Robin every node is one of exactly three things:
 
-- an **element** — a tag like `<p>`, `<a>`, or `<div>`, which carries a tag name and a bag of attributes;
-- a run of **text** — the actual words, like `Hello`;
-- a **comment** — `<!-- like this -->`, kept so the tree can round-trip but ignored by style and layout.
+- an **element** - a tag like `<p>`, `<a>`, or `<div>`, which carries a tag name and a bag of attributes;
+- a run of **text** - the actual words, like `Hello`;
+- a **comment** - `<!-- like this -->`, kept so the tree can round-trip but ignored by style and layout.
 
 Any node can have **children**, and that recursion is what makes it a tree. A real browser's DOM has dozens of node types and an enormous API; ours has exactly what layout and painting need to read.
 
@@ -40,7 +40,7 @@ pub struct Node {
 }
 ```
 
-A node is just its children plus a `node_type` tag telling us *what* it is. Children are stored **inline** (`Vec<Node>`) rather than behind pointers, so a parent simply owns its children — clean, Rust-friendly ownership.
+A node is just its children plus a `node_type` tag telling us *what* it is. Children are stored **inline** (`Vec<Node>`) rather than behind pointers, so a parent simply owns its children - clean, Rust-friendly ownership.
 
 What a node *is* lives in the `NodeType` enum:
 
@@ -61,7 +61,7 @@ pub struct ElementData {
 }
 ```
 
-`AttrMap` is just a `type` alias for `HashMap<String, String>` — an element's attributes, e.g. `{"href": "/about", "class": "nav link"}`.
+`AttrMap` is just a `type` alias for `HashMap<String, String>` - an element's attributes, e.g. `{"href": "/about", "class": "nav link"}`.
 
 Rather than building these structs by hand everywhere, the module gives us three small **constructor functions** so the HTML parser and tests can build nodes readably:
 
@@ -97,7 +97,7 @@ pub fn classes(&self) -> HashSet<&str> {
 
 `classes()` splits the `class` attribute on whitespace into a `HashSet`, which is exactly the shape a CSS class selector wants to test against.
 
-To pull the text out of a subtree, `inner_text()` walks every descendant and concatenates the text it finds — handy for tests and for reading a page's `<title>`:
+To pull the text out of a subtree, `inner_text()` walks every descendant and concatenates the text it finds - handy for tests and for reading a page's `<title>`:
 
 ```rust
 pub fn inner_text(&self) -> String {
@@ -119,14 +119,14 @@ pub fn pretty_print(node: &Node) -> String {
 }
 ```
 
-`print_node` prints `#text "..."` for text, `<!-- ... -->` for comments, and `<tag attr="...">` for elements — sorting attributes so the output is stable for tests — then recurses one level deeper for each child. The CLI exposes this via `--dump-dom`.
+`print_node` prints `#text "..."` for text, `<!-- ... -->` for comments, and `<tag attr="...">` for elements - sorting attributes so the output is stable for tests - then recurses one level deeper for each child. The CLI exposes this via `--dump-dom`.
 
 ## Rust notes
 
 A few techniques here are worth pausing on:
 
 - **Enums + `match` model "one of N things."** `NodeType` is a *sum type*: a node is text **or** an element **or** a comment, never two at once, and each variant carries its own payload. Functions like `element()` and `collect_text` use `match` (or `if let`) to handle each case, and the compiler makes sure you don't forget one.
-- **Owning children via `Vec<Node>`.** Storing children inline gives every node a single, obvious owner — its parent. No reference counting, no lifetimes to thread through the tree. (The trade-off, noted in the source, is no parent pointers; a JS-driving browser would need them, a render-only engine doesn't.)
+- **Owning children via `Vec<Node>`.** Storing children inline gives every node a single, obvious owner - its parent. No reference counting, no lifetimes to thread through the tree. (The trade-off, noted in the source, is no parent pointers; a JS-driving browser would need them, a render-only engine doesn't.)
 - **`impl Into<String>` for ergonomic constructors.** `text("hi")` accepts a `&str` *and* a `String` because the parameter is `impl Into<String>`. The constructor calls `.into()` once and stores an owned `String`, so callers don't have to sprinkle `.to_string()` everywhere.
 - **`HashSet<&str>` for classes.** Membership tests (`classes().contains("active")`) are O(1), and borrowing `&str` slices out of the existing attribute string means `classes()` allocates the set but not the strings inside it.
 
@@ -148,11 +148,11 @@ You should see an indented tree with a `<p>` element, a `#text "Hi"` node, and a
 
 ## Exercises
 
-1. **Easy — count the nodes.** Add a method `fn node_count(&self) -> usize` on `Node` that returns the total number of nodes in the subtree (this node plus all descendants). Follow the recursive shape of `collect_text`. Write a test asserting the `<p>Hello <b>world</b></p>` tree has 4 nodes.
+1. **Easy - count the nodes.** Add a method `fn node_count(&self) -> usize` on `Node` that returns the total number of nodes in the subtree (this node plus all descendants). Follow the recursive shape of `collect_text`. Write a test asserting the `<p>Hello <b>world</b></p>` tree has 4 nodes.
 
-2. **Medium — find by tag.** Add `fn find_by_tag<'a>(&'a self, tag: &str, out: &mut Vec<&'a Node>)` that pushes every element whose `tag_name()` matches `tag` into `out`. Reuse the existing `tag_name()` helper, and test it against a tree with two `<b>` elements.
+2. **Medium - find by tag.** Add `fn find_by_tag<'a>(&'a self, tag: &str, out: &mut Vec<&'a Node>)` that pushes every element whose `tag_name()` matches `tag` into `out`. Reuse the existing `tag_name()` helper, and test it against a tree with two `<b>` elements.
 
-3. **Hard — a `descendants()` iterator.** Write an iterator that yields every descendant node in document order (depth-first, pre-order), so callers can write `for node in root.descendants() { ... }` instead of recursing by hand. Implement a struct holding a stack of `&Node`, push children in reverse so they pop left-to-right, and `impl Iterator for` it. Rewrite `inner_text()` on top of it and confirm the existing tests still pass.
+3. **Hard - a `descendants()` iterator.** Write an iterator that yields every descendant node in document order (depth-first, pre-order), so callers can write `for node in root.descendants() { ... }` instead of recursing by hand. Implement a struct holding a stack of `&Node`, push children in reverse so they pop left-to-right, and `impl Iterator for` it. Rewrite `inner_text()` on top of it and confirm the existing tests still pass.
 
 ---
 

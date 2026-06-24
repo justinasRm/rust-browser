@@ -1,4 +1,4 @@
-//! Networking — getting a page's bytes, wherever they live.
+//! Networking - getting a page's bytes, wherever they live.
 //!
 //! A browser's address bar accepts a few different kinds of "location": a real
 //! `https://` URL, a `file://` path, or just a path on disk. This module hides
@@ -10,7 +10,7 @@
 //! and feed them to the CSS parser alongside any inline `<style>` blocks.
 //!
 //! We use [`ureq`], a small blocking HTTP client, so the code reads like
-//! ordinary top-to-bottom Rust — no async, no executor. A real browser fetches
+//! ordinary top-to-bottom Rust - no async, no executor. A real browser fetches
 //! many resources concurrently; that's a great thing to add later.
 
 use std::time::Duration;

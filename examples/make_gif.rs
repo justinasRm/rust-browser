@@ -2,7 +2,7 @@
 //!
 //! This is how `docs/images/demo.gif` is produced. It renders a (local) page to
 //! a tall canvas with the normal pipeline, then writes a series of GIF frames,
-//! each showing the visible window at a slightly larger scroll offset — exactly
+//! each showing the visible window at a slightly larger scroll offset - exactly
 //! what the interactive window does, captured to a file.
 //!
 //! Usage:

@@ -1,15 +1,15 @@
-# 🔤 Chapter 8 — Inline layout & text flow
+# 🔤 Chapter 8 - Inline layout & text flow
 
 Block layout (Chapter 6) gave us a stack of rectangles: each box as wide as its
 container, stacked top to bottom. That is the skeleton of a page. But a page is
-not really made of rectangles — it is made of *words*. This chapter is where the
+not really made of rectangles - it is made of *words*. This chapter is where the
 skeleton gets its text, where boxes stop being grey slabs and start being
 **readable**.
 
 The job sounds simple: put text inside a box. The reality is the single most
 important loop in a browser's layout engine. Text does not fit on one line, so we
 have to break it into lines. Words have different widths, so we have to *measure*
-them. A sentence can mix a bold word, a link, and plain text — and they all share
+them. A sentence can mix a bold word, a link, and plain text - and they all share
 the same line, aligned along a common baseline. That whole machine is the
 **inline formatting context**, and Robin builds it in `src/layout.rs`.
 
@@ -26,11 +26,11 @@ bottom**, like a typewriter:
 6. **Collapse whitespace**: any run of spaces, tabs, and newlines in the source
    becomes a single space between words.
 7. A `<br>` forces a line break wherever it appears.
-8. **Mixed styles share a line** — bold, italic, and plain words sit side by
+8. **Mixed styles share a line** - bold, italic, and plain words sit side by
    side, and each line is aligned to the **baseline** of its tallest glyph.
 
 That last point is the subtle one. A 16px word and a 24px word on the same line
-do not line up by their tops or their bottoms — they line up by the invisible
+do not line up by their tops or their bottoms - they line up by the invisible
 line their letters *sit on*, the baseline. So we cannot assign a word its final
 vertical position until we have seen the whole line and know who the tallest
 glyph is. Robin handles this by buffering a line, then committing it.
@@ -61,21 +61,21 @@ fn layout_inline(&mut self, containing_block: Dimensions, fonts: &Fonts) {
 ```
 
 Notice that `fonts` is threaded in. The whole reason the `Fonts` set travels all
-the way down the layout pass — `layout_tree` → `layout` → `layout_inline` — is
+the way down the layout pass - `layout_tree` → `layout` → `layout_inline` - is
 that **you cannot lay out text without measuring it**, and measuring needs the
 actual glyph metrics from `src/text.rs`. Layout and font metrics are inseparable.
 
 `InlineFlow` keeps the line-breaker's running state:
 
-- `line_start_x` / `origin_y` — the top-left corner of the strip.
-- `avail` — how wide a line may be.
-- `cursor_x` — the horizontal pen position on the current line.
-- `line_top` — the y of the top of the current line.
-- `current_line: Vec<PendingFragment>` — words placed but not yet vertically
+- `line_start_x` / `origin_y` - the top-left corner of the strip.
+- `avail` - how wide a line may be.
+- `cursor_x` - the horizontal pen position on the current line.
+- `line_top` - the y of the top of the current line.
+- `current_line: Vec<PendingFragment>` - words placed but not yet vertically
   positioned (we are still discovering the tallest glyph).
-- `fragments: Vec<InlineFragment>` — finished, baseline-positioned text.
-- `pending_space` — whether a space should precede the next word.
-- `height` — total vertical space consumed so far.
+- `fragments: Vec<InlineFragment>` - finished, baseline-positioned text.
+- `pending_space` - whether a space should precede the next word.
+- `height` - total vertical space consumed so far.
 
 ### Walking the inline boxes
 
@@ -112,7 +112,7 @@ font face when we measure, so a bold word is measured with the bold face.
 
 `add_text` does the whitespace collapsing. `split_whitespace()` already drops
 runs of internal whitespace, so the only thing we track by hand is whether the
-text *started* or *ended* with whitespace — those edges become a `pending_space`
+text *started* or *ended* with whitespace - those edges become a `pending_space`
 that separates this run from its neighbours:
 
 ```rust
@@ -174,14 +174,14 @@ fn place_word(&mut self, word: &str, style: InlineStyle) {
 ```
 
 The wrap test is `cursor_x + space_w + word_w > line_start_x + avail`: *would the
-pen, plus the space, plus this word, run past the right edge?* If so — and we are
-not already at the start of a line — we break. The `!at_line_start` guard matters:
+pen, plus the space, plus this word, run past the right edge?* If so - and we are
+not already at the start of a line - we break. The `!at_line_start` guard matters:
 a single word wider than the whole strip still has to go *somewhere*, so we place
 it rather than loop forever breaking onto empty lines.
 
 When the word is placed, its `baseline` is left at `0.0`. We record the glyph's
 `ascent` and `line_height` (from `line_metrics`) in a `PendingFragment` and move
-on — the real baseline comes at the end of the line.
+on - the real baseline comes at the end of the line.
 
 ### Ending a line
 
@@ -220,20 +220,20 @@ next to 16px body text reads correctly. An empty line (a leading `<br>`) still
 advances by a default 16px line height, so blank lines take up space.
 
 Finally, `finish` flushes whatever words are still buffered when the input runs
-out — the last line never ends with a `<br>`, so it needs an explicit commit.
+out - the last line never ends with a `<br>`, so it needs an explicit commit.
 
 ## Rust notes
 
 - **`&Fonts` rides the whole recursion.** Because measuring is part of layout,
   every layout method takes `fonts: &Fonts`. It is a shared reference, so the one
-  parsed font set is borrowed immutably all the way down — no cloning, no global.
+  parsed font set is borrowed immutably all the way down - no cloning, no global.
 - **Two vectors, two phases.** `current_line: Vec<PendingFragment>` is the
   *in-progress* line; `fragments: Vec<InlineFragment>` is the *finished* output.
   A `PendingFragment` is just an `InlineFragment` plus the `ascent` and
   `line_height` we need to position it. Buffering in one vec and draining into the
   other is what lets us decide the baseline only once the line is complete.
 - **`fold` finds the tallest glyph.** `current_line.iter().fold((0.0, 0.0), …)`
-  reduces the line to its `(max_ascent, max_line_height)` in a single pass — a
+  reduces the line to its `(max_ascent, max_line_height)` in a single pass - a
   clean functional way to ask "who is the tallest word here?"
 - **`char::is_whitespace` and `split_whitespace`.** The standard library already
   knows what counts as whitespace across Unicode, so collapsing runs of spaces,
@@ -257,7 +257,7 @@ cargo run -- /tmp/x.html --png /tmp/x.png --width 300
 
 Open `/tmp/x.png` and you should see the sentence broken across several lines,
 each filling roughly 300px before wrapping. Try `--width 600` and watch the same
-text reflow onto fewer lines — that is `place_word`'s wrap test responding to a
+text reflow onto fewer lines - that is `place_word`'s wrap test responding to a
 wider `avail`.
 
 The wrapping, `<br>`, and mixed-style logic all have tests:
@@ -275,7 +275,7 @@ word carries `bold`, an `<i>` word carries `italic`, plain text carries neither)
 
 1. **Honor `white-space: pre`.** Right now all whitespace collapses. Add a flag
    to `InlineStyle` for `white-space`, and when it is `pre`, stop splitting on
-   whitespace — preserve the runs of spaces and break the line on every literal
+   whitespace - preserve the runs of spaces and break the line on every literal
    `\n`. (Easy: just newlines. Harder: preserve internal spaces too.)
 2. **Implement `text-align`.** After `break_line` knows the line's final width
    (`cursor_x - line_start_x`), shift every fragment on that line right by the

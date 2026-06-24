@@ -9,7 +9,7 @@
 //!
 //! is one rule with two selectors (`a.story` and `h1`) and two declarations.
 //!
-//! We support **simple selectors** — an optional tag name, an optional `#id`,
+//! We support **simple selectors** - an optional tag name, an optional `#id`,
 //! and any number of `.class`es, plus the universal `*`. That is enough to drive
 //! a built-in user-agent stylesheet and to match the common author rules on the
 //! pages we render. Combinators (descendant, child, …) are intentionally left
@@ -206,7 +206,7 @@ impl<'a> Parser<'a> {
                     // A simple selector is only valid here if the next thing is a
                     // comma or the start of the declaration block. Anything else
                     // means a combinator/compound/pseudo we don't model
-                    // (`a b`, `a > b`, `a:hover`, `a[x]`) — drop the whole
+                    // (`a b`, `a > b`, `a:hover`, `a[x]`) - drop the whole
                     // selector so we never *mis*-apply it. (Matching nothing is
                     // safer than matching the wrong elements.)
                     match (parsed, self.next_char()) {
@@ -467,7 +467,7 @@ impl<'a> Parser<'a> {
 
     /// Advance past the current character by its full UTF-8 width. Using this
     /// instead of a bare `self.pos += 1` is what keeps the cursor on a character
-    /// boundary even when the stylesheet contains multibyte text (`·`, `—`, …) —
+    /// boundary even when the stylesheet contains multibyte text (`·`, `-`, …) -
     /// land mid-character and the next `next_char()` slice would panic.
     fn bump(&mut self) {
         if self.pos < self.input.len() {
@@ -542,7 +542,7 @@ fn parse_hex(hex: &str) -> Option<Color> {
     }
 }
 
-/// A handful of CSS named colors — the ones our pages and UA stylesheet use.
+/// A handful of CSS named colors - the ones our pages and UA stylesheet use.
 fn named_color(name: &str) -> Option<Color> {
     let c = match name.to_ascii_lowercase().as_str() {
         "black" => (0, 0, 0),

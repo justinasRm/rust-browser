@@ -1,11 +1,11 @@
-# 📄 Chapter 2 — The HTML parser
+# 📄 Chapter 2 - The HTML parser
 
-In [Chapter 1](01-the-dom.md) we built the DOM — the tree every later stage walks.
+In [Chapter 1](01-the-dom.md) we built the DOM - the tree every later stage walks.
 But trees don't grow on their own. We feed the browser a string of HTML text, and
 something has to turn that messy string into `dom::Node`s.
 
 That something is the parser in [`src/html.rs`](../src/html.rs), and its single most
-important property is this: **it never errors.** Real-world HTML is a disaster — tags
+important property is this: **it never errors.** Real-world HTML is a disaster - tags
 left unclosed, elements mis-nested, attributes with no quotes, `<script>` bodies full
 of things that *look* like tags but aren't. A parser that demanded well-formed XML would
 choke on every page on the web. So, like every real browser, ours does its best and
@@ -28,16 +28,16 @@ The design is the classic browser split: a **tokenizer** feeding a **tree builde
 - The **`Tokenizer`** walks the input once, recognizing start tags, end tags, text,
   comments, and doctypes. It doesn't know anything about nesting.
 - The **`TreeBuilder`** turns that stream of tokens into a tree. Its secret weapon is
-  a **stack of open elements** — literally a `Vec<Node>`. Opening a tag pushes a node;
+  a **stack of open elements** - literally a `Vec<Node>`. Opening a tag pushes a node;
   closing one pops back to the matching element, auto-closing anything mis-nested in
   between.
 
 Why all the tolerance? Because authors lean on it constantly:
 
-- `<ul><li>one<li>two</ul>` — the `<li>`s are never closed; the parser must imply it.
-- `<p><b><i>x</b></i></p>` — `</b>` arrives before `</i>`. Mis-nested, but it must render.
-- `<script>if (a < b) {}</script>` — that `<` is *not* a tag.
-- `<a href=/about class=nav>` — unquoted attribute values.
+- `<ul><li>one<li>two</ul>` - the `<li>`s are never closed; the parser must imply it.
+- `<p><b><i>x</b></i></p>` - `</b>` arrives before `</i>`. Mis-nested, but it must render.
+- `<script>if (a < b) {}</script>` - that `<` is *not* a tag.
+- `<a href=/about class=nav>` - unquoted attribute values.
 
 A real browser handles every one of these without complaint, and so does Robin. This is
 a *pragmatic subset* of the HTML5 algorithm: enough to render Hacker News and Wikipedia,
@@ -47,7 +47,7 @@ small enough to read in one sitting.
 
 ### The main loop
 
-`Tokenizer::run()` is a flat dispatch — look at what's under the cursor and pick a handler:
+`Tokenizer::run()` is a flat dispatch - look at what's under the cursor and pick a handler:
 
 ```rust
 fn run(&mut self) {
@@ -55,7 +55,7 @@ fn run(&mut self) {
         if self.starts_with("<!--") {
             self.parse_comment();
         } else if self.starts_with("<!") || self.starts_with("<?") {
-            // Doctype or processing instruction — skip to the next '>'.
+            // Doctype or processing instruction - skip to the next '>'.
             self.skip_until_byte(b'>');
         } else if self.starts_with("</") {
             self.parse_end_tag();
@@ -89,7 +89,7 @@ fn open_tag(&mut self, tag: &str, attrs: AttrMap) {
 ```
 
 Closing a tag is where tolerance shines. We find the *nearest* matching open element and
-pop everything above it — auto-closing whatever was mis-nested:
+pop everything above it - auto-closing whatever was mis-nested:
 
 ```rust
 fn close_tag(&mut self, tag: &str) {
@@ -145,7 +145,7 @@ element starts, and handles table rows and cells.
 
 Some elements never have children: `<br>`, `<img>`, `<input>`, and friends. They live in
 `VOID_ELEMENTS`, and `is_void()` checks membership. In `parse_start_tag`, both a void tag
-and an explicit `/>` are appended rather than pushed — so they can never swallow the
+and an explicit `/>` are appended rather than pushed - so they can never swallow the
 siblings that follow them:
 
 ```rust
@@ -188,7 +188,7 @@ fn consume_raw_text(&mut self, tag: &str) {
 ```
 
 `starts_with_ci` is case-insensitive so `</SCRIPT>` closes a `<script>`. And note the
-distinction: `<title>`/`<textarea>` are *RCDATA* — their entities are decoded — while
+distinction: `<title>`/`<textarea>` are *RCDATA* - their entities are decoded - while
 `<script>`/`<style>` are left completely raw.
 
 ### Decoding entities
@@ -211,7 +211,7 @@ fn decode_one_entity(entity: &str) -> Option<String> {
     let s = match entity {
         "amp" => "&",
         "lt" => "<",
-        "mdash" => "—",
+        "mdash" => "-",
         "nbsp" => "\u{00a0}",
         // ...a small named table of what actually shows up in page text...
         _ => return None,
@@ -221,7 +221,7 @@ fn decode_one_entity(entity: &str) -> Option<String> {
 ```
 
 All numeric references are supported; named entities are a curated handful (the ~30 that
-actually appear in body text). Anything unrecognized is left as a literal `&` — tolerant,
+actually appear in body text). Anything unrecognized is left as a literal `&` - tolerant,
 as always.
 
 ## Rust notes
@@ -232,12 +232,12 @@ as always.
 - **Bytes vs. chars, carefully.** The tokenizer holds both `input: &[u8]` and `chars: &str`.
   Scanning advances `pos` one *byte* at a time (fast, simple), but the helpers know the
   difference: `starts_with_bytes` and `starts_with_ci` compare raw bytes and are safe even
-  mid-character, while slicing `self.chars[..]` only happens at known ASCII boundaries —
-  so a multibyte `—` or `café` inside a comment or `<script>` never panics.
+  mid-character, while slicing `self.chars[..]` only happens at known ASCII boundaries -
+  so a multibyte `-` or `café` inside a comment or `<script>` never panics.
 - **`matches!` for tidy membership.** Tests like `matches!(current, "td" | "th" | "tr")`
   read cleanly as "is `current` one of these?" without spelling out `==` chains.
 - **`let … else` for early exit.** `let Some(current) = … else { return };` grabs the
-  current element or bails — a clean way to handle "nothing left on the stack."
+  current element or bails - a clean way to handle "nothing left on the stack."
 
 ## Try it
 
@@ -256,13 +256,13 @@ Then watch implied end tags in action with the CLI's DOM dumper:
 printf '<ul><li>one<li>two</ul>' > /tmp/x.html && cargo run -- /tmp/x.html --dump-dom
 ```
 
-The two `<li>` elements come out as *siblings* inside `<ul>`, not nested — even though the
+The two `<li>` elements come out as *siblings* inside `<ul>`, not nested - even though the
 source never closed the first one.
 
 ## Exercises
 
 1. **Add named entities (easy).** Extend the `match` in `decode_one_entity` with a few more
-   references you've seen on the web — `&hearts;` (♥), `&dagger;` (†), `&spades;` (♠). Add a
+   references you've seen on the web - `&hearts;` (♥), `&dagger;` (†), `&spades;` (♠). Add a
    case to the `decodes_entities` test to confirm.
 
 2. **Teach it a new void element (easy).** SVG's `<circle>` and `<path>` are effectively void
@@ -270,12 +270,12 @@ source never closed the first one.
    swallow its following siblings as children (mirror `handles_void_and_self_closing`).
 
 3. **Handle CDATA sections (medium).** `<![CDATA[ … ]]>` currently gets swallowed by the
-   `<!` branch in `run()`, which skips to the next `>` — wrong, since the content may contain
+   `<!` branch in `run()`, which skips to the next `>` - wrong, since the content may contain
    `>`. Add a branch that detects `<![CDATA[`, reads verbatim to `]]>`, and emits the inside
    as a text node.
 
 4. **Spot the `<title>` attribute gap (medium).** `consume_raw_text` is entered *after*
-   `read_attributes`, so `<title lang="en">Hi</title>` already keeps its attributes — verify
+   `read_attributes`, so `<title lang="en">Hi</title>` already keeps its attributes - verify
    this with a test. Then make the harder case work: ensure a `</title >` with trailing
    whitespace before `>` still closes correctly (look at how `consume_raw_text` finishes by
    calling `skip_until_byte(b'>')`).
