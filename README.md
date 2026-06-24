@@ -86,6 +86,38 @@ Language* book](https://doc.rust-lang.org/book/) explains each one well - keep i
 open in a tab. And if you're using a coding agent, just ask it to explain any
 line; this repo is set up to help it teach you (see below).
 
+## How it works
+
+Each box is one Rust module in [`src/`](src/), and the page flows through them
+top to bottom. Solid arrows carry the page's data from stage to stage; dotted
+arrows show the font engine, which layout uses to *measure* text and paint uses
+to *draw* it.
+
+```mermaid
+flowchart TD
+    URL["URL / file / snapshot"] --> NET["net.rs<br/><i>fetch bytes + linked CSS</i>"]
+
+    NET -->|HTML| HTML["html.rs<br/><i>tokenizer + tree builder</i>"]
+    HTML -->|DOM tree| DOM["dom.rs<br/><i>Node / Element / Text</i>"]
+    NET -->|"CSS (linked + inline)"| CSS["css.rs<br/><i>selectors + declarations</i>"]
+
+    DOM --> STYLE["style.rs<br/><i>the cascade + user-agent sheet</i>"]
+    CSS -->|Stylesheet| STYLE
+    STYLE -->|styled tree| LAYOUT["layout.rs<br/><i>box model + inline flow</i>"]
+
+    LAYOUT -->|box tree| PAINT["paint.rs<br/><i>display list</i>"]
+    PAINT -->|draw commands| RENDER["render.rs<br/><i>Canvas (software rasterizer)</i>"]
+
+    TEXT["text.rs<br/><i>font metrics + glyphs</i>"] -. measure .-> LAYOUT
+    TEXT -. draw glyphs .-> RENDER
+
+    RENDER -->|pixels| PNG["PNG file"]
+    RENDER -->|pixels| WIN["window.rs<br/><i>scrollable window</i>"]
+```
+
+The CLI in [`src/main.rs`](src/main.rs) wires these together; the
+[chapters](docs/) below walk each module in this order.
+
 ## Learn it commit by commit
 
 This repo's **git history is the tutorial**. Each commit adds exactly one idea,
