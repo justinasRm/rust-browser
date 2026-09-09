@@ -184,6 +184,17 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
+impl Node {
+    fn node_count(&self) -> usize {
+        //
+        let mut count: usize = 1;
+        for child in &self.children {
+            count += child.node_count();
+        }
+        count
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,6 +204,25 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect()
+    }
+
+    #[test]
+    fn node_count() {
+        let node: Node = elem(
+            "p",
+            AttrMap::new(),
+            vec![
+                text("Hello "),
+                elem("b", AttrMap::new(), vec![text("world")]),
+            ],
+        );
+        assert_eq!(node.node_count(), 4);
+    }
+
+    #[test]
+    fn node_count_1() {
+        let node: Node = elem("p", AttrMap::new(), vec![]);
+        assert_eq!(node.node_count(), 1);
     }
 
     #[test]
