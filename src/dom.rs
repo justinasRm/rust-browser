@@ -193,6 +193,17 @@ impl Node {
         }
         count
     }
+    fn find_by_tag<'a>(&'a self, tag: &str, out: &mut Vec<&'a Node>) {
+        if let Some(tag_match) = self.tag_name() {
+            if tag_match == tag {
+                out.push(self);
+            }
+        }
+
+        for child in &self.children {
+            child.find_by_tag(tag, out);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -204,6 +215,28 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect()
+    }
+
+    #[test]
+    fn find_by_tag_test() {
+        let node: Node = elem(
+            "b",
+            attrs(&[("href", "abcd")]),
+            vec![elem(
+                "p",
+                AttrMap::new(),
+                vec![
+                    text("firstB"),
+                    elem("b", AttrMap::new(), vec![text("firstB")]),
+                ],
+            )],
+        );
+
+        let mut matches: Vec<&Node> = Vec::new();
+        node.find_by_tag("b", &mut matches);
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].inner_text(), "firstBfirstB");
+        assert_eq!(matches[1].inner_text(), "firstB");
     }
 
     #[test]
