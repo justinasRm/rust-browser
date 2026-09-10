@@ -104,17 +104,15 @@ impl Node {
     /// All text under this node, concatenated. Handy for tests and for `<title>`.
     pub fn inner_text(&self) -> String {
         let mut out = String::new();
-        self.collect_text(&mut out);
+        if let Some(xd) = self.text_content() {
+            out.push_str(xd);
+        }
+        for descendant in self.descendants() {
+            if let Some(desc) = descendant.text_content() {
+                out.push_str(desc);
+            }
+        }
         out
-    }
-
-    fn collect_text(&self, out: &mut String) {
-        if let NodeType::Text(s) = &self.node_type {
-            out.push_str(s);
-        }
-        for child in &self.children {
-            child.collect_text(out);
-        }
     }
 }
 
@@ -184,7 +182,32 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
+struct Descendants<'a> {
+    stack: Vec<&'a Node>,
+}
+
+impl<'a> Iterator for Descendants<'a> {
+    type Item = &'a Node;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let cur = self.stack.pop();
+        if let Some(x) = cur {
+            for child in x.children.iter().rev() {
+                self.stack.push(child);
+            }
+            return Some(x);
+        } else {
+            return None;
+        }
+    }
+}
+
 impl Node {
+    fn descendants(&self) -> Descendants<'_> {
+        Descendants {
+            stack: self.children.iter().rev().collect(),
+        }
+    }
     fn node_count(&self) -> usize {
         //
         let mut count: usize = 1;
@@ -215,6 +238,35 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect()
+    }
+
+    #[test]
+    fn descendants_test() {
+        let node: Node = elem(
+            "b",
+            AttrMap::new(),
+            vec![
+                elem(
+                    "p",
+                    AttrMap::new(),
+                    vec![
+                        text("firstB"),
+                        elem("d", AttrMap::new(), vec![text("secondB")]),
+                    ],
+                ),
+                elem("f", AttrMap::new(), vec![]),
+            ],
+        );
+
+        let descendants: Vec<&Node> = node.descendants().collect();
+        assert_eq!(descendants.len(), 5);
+        assert_eq!(descendants[0].tag_name(), Some("p"));
+        assert_eq!(descendants[1].text_content(), Some("firstB"));
+        assert_eq!(descendants[2].tag_name(), Some("d"));
+        assert_eq!(descendants[3].text_content(), Some("secondB"));
+        assert_eq!(descendants[4].tag_name(), Some("f"));
+
+        assert_eq!(text("hello").inner_text(), "hello");
     }
 
     #[test]
