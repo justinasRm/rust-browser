@@ -182,7 +182,7 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
-struct Descendants<'a> {
+pub struct Descendants<'a> {
     stack: Vec<&'a Node>,
 }
 
@@ -203,7 +203,7 @@ impl<'a> Iterator for Descendants<'a> {
 }
 
 impl Node {
-    fn descendants(&self) -> Descendants<'_> {
+    pub fn descendants(&self) -> Descendants<'_> {
         Descendants {
             stack: self.children.iter().rev().collect(),
         }

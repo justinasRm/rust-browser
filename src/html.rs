@@ -33,7 +33,7 @@ pub fn parse(source: &str) -> Node {
 // Elements that never have children or a closing tag.
 const VOID_ELEMENTS: &[&str] = &[
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
-    "track", "wbr",
+    "track", "wbr", "path", "circle",
 ];
 
 // Elements whose content is raw text, not markup. We read their body verbatim
@@ -513,6 +513,8 @@ fn decode_one_entity(entity: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::assert_eq;
+
     use super::*;
     use crate::dom::pretty_print;
 
@@ -533,6 +535,24 @@ mod tests {
         let dump = pretty_print(&dom);
         assert!(dump.contains("<br>"));
         assert!(dump.contains("<img src=\"x\">"));
+    }
+
+    #[test]
+    fn handles_void_svgs() {
+        let dom = parse("<div>a<br>b<svg><circle/><path/>_after_</svg>c</div>");
+        assert_eq!(dom.inner_text(), "ab_after_c");
+        let dump = pretty_print(&dom);
+        assert!(dump.contains("<svg>"));
+        assert!(dump.contains("<circle>"));
+
+        for node in dom.descendants() {
+            if let Some("svg") = node.tag_name() {
+                assert_eq!(node.children.len(), 3);
+                assert_eq!(node.children[0].tag_name(), Some("circle"));
+                assert_eq!(node.children[1].tag_name(), Some("path"));
+                break;
+            }
+        }
     }
 
     #[test]
