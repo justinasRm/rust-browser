@@ -7,7 +7,7 @@ something has to turn that messy string into `dom::Node`s.
 That something is the parser in [`src/html.rs`](../src/html.rs), and its single most
 important property is this: **it never errors.** Real-world HTML is a disaster - tags
 left unclosed, elements mis-nested, attributes with no quotes, `<script>` bodies full
-of things that *look* like tags but aren't. A parser that demanded well-formed XML would
+of things that _look_ like tags but aren't. A parser that demanded well-formed XML would
 choke on every page on the web. So, like every real browser, ours does its best and
 keeps going. The public entry point is one function:
 
@@ -36,11 +36,11 @@ Why all the tolerance? Because authors lean on it constantly:
 
 - `<ul><li>one<li>two</ul>` - the `<li>`s are never closed; the parser must imply it.
 - `<p><b><i>x</b></i></p>` - `</b>` arrives before `</i>`. Mis-nested, but it must render.
-- `<script>if (a < b) {}</script>` - that `<` is *not* a tag.
+- `<script>if (a < b) {}</script>` - that `<` is _not_ a tag.
 - `<a href=/about class=nav>` - unquoted attribute values.
 
 A real browser handles every one of these without complaint, and so does Robin. This is
-a *pragmatic subset* of the HTML5 algorithm: enough to render Hacker News and Wikipedia,
+a _pragmatic subset_ of the HTML5 algorithm: enough to render Hacker News and Wikipedia,
 small enough to read in one sitting.
 
 ## Walking the code
@@ -74,7 +74,7 @@ A lone `<` (as in `a < b`) falls through to `parse_text()` and is treated as lit
 ### Open and close, on the stack
 
 The tree builder is where nesting lives. Opening a tag first applies any implied end
-tags (more below), then either *appends* a void element or *pushes* a normal one:
+tags (more below), then either _appends_ a void element or _pushes_ a normal one:
 
 ```rust
 fn open_tag(&mut self, tag: &str, attrs: AttrMap) {
@@ -88,7 +88,7 @@ fn open_tag(&mut self, tag: &str, attrs: AttrMap) {
 }
 ```
 
-Closing a tag is where tolerance shines. We find the *nearest* matching open element and
+Closing a tag is where tolerance shines. We find the _nearest_ matching open element and
 pop everything above it - auto-closing whatever was mis-nested:
 
 ```rust
@@ -137,7 +137,7 @@ fn apply_implied_end_tags(&mut self, opening: &str) {
 }
 ```
 
-This is the rule that makes `<li>one<li>two` produce two *siblings* instead of nesting
+This is the rule that makes `<li>one<li>two` produce two _siblings_ instead of nesting
 the second `<li>` inside the first. The same machinery closes an open `<p>` when a block
 element starts, and handles table rows and cells.
 
@@ -164,7 +164,7 @@ if self_closing || is_void(&tag) {
 ### Raw-text elements
 
 `<script>`, `<style>`, `<textarea>`, `<title>`, and `<noscript>` (the `RAW_TEXT_ELEMENTS`)
-hold *text*, not markup. Inside them, `<` is just a character. `consume_raw_text` reads
+hold _text_, not markup. Inside them, `<` is just a character. `consume_raw_text` reads
 the body verbatim until it finds the matching close tag:
 
 ```rust
@@ -188,7 +188,7 @@ fn consume_raw_text(&mut self, tag: &str) {
 ```
 
 `starts_with_ci` is case-insensitive so `</SCRIPT>` closes a `<script>`. And note the
-distinction: `<title>`/`<textarea>` are *RCDATA* - their entities are decoded - while
+distinction: `<title>`/`<textarea>` are _RCDATA_ - their entities are decoded - while
 `<script>`/`<style>` are left completely raw.
 
 ### Decoding entities
@@ -230,7 +230,7 @@ as always.
   `Vec<Node>` and pushes/pops it. This sidesteps deep recursion on pathological input and
   makes "pop back to the matching element" a plain `while self.stack.len() > idx` loop.
 - **Bytes vs. chars, carefully.** The tokenizer holds both `input: &[u8]` and `chars: &str`.
-  Scanning advances `pos` one *byte* at a time (fast, simple), but the helpers know the
+  Scanning advances `pos` one _byte_ at a time (fast, simple), but the helpers know the
   difference: `starts_with_bytes` and `starts_with_ci` compare raw bytes and are safe even
   mid-character, while slicing `self.chars[..]` only happens at known ASCII boundaries -
   so a multibyte `-` or `café` inside a comment or `<script>` never panics.
@@ -256,7 +256,7 @@ Then watch implied end tags in action with the CLI's DOM dumper:
 printf '<ul><li>one<li>two</ul>' > /tmp/x.html && cargo run -- /tmp/x.html --dump-dom
 ```
 
-The two `<li>` elements come out as *siblings* inside `<ul>`, not nested - even though the
+The two `<li>` elements come out as _siblings_ inside `<ul>`, not nested - even though the
 source never closed the first one.
 
 ## Exercises
@@ -274,7 +274,7 @@ source never closed the first one.
    `>`. Add a branch that detects `<![CDATA[`, reads verbatim to `]]>`, and emits the inside
    as a text node.
 
-4. **Spot the `<title>` attribute gap (medium).** `consume_raw_text` is entered *after*
+4. **Spot the `<title>` attribute gap (medium).** `consume_raw_text` is entered _after_
    `read_attributes`, so `<title lang="en">Hi</title>` already keeps its attributes - verify
    this with a test. Then make the harder case work: ensure a `</title >` with trailing
    whitespace before `>` still closes correctly (look at how `consume_raw_text` finishes by

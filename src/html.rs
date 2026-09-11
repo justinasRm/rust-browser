@@ -474,6 +474,9 @@ fn decode_one_entity(entity: &str) -> Option<String> {
     }
     // A small named table - the entities that actually appear in page text.
     let s = match entity {
+        "hearts" => "♥",
+        "dagger" => "†",
+        "spades" => "♠",
         "amp" => "&",
         "lt" => "<",
         "gt" => ">",
@@ -552,7 +555,7 @@ mod tests {
     fn script_body_is_not_parsed_as_html() {
         let dom = parse("<script>if (a < b && c > d) {}</script><p>after</p>");
         // The '<' inside the script must not start a tag.
-        assert_eq!(dom.inner_text().contains("after"), true);
+        assert!(dom.inner_text().contains("after"));
         let dump = pretty_print(&dom);
         assert!(dump.contains("<script>"));
         assert!(dump.contains("<p>"));
@@ -562,6 +565,9 @@ mod tests {
     fn decodes_entities() {
         let dom = parse("<p>Fish &amp; chips &mdash; &#163;5 &#x263A;</p>");
         assert_eq!(dom.inner_text(), "Fish & chips — £5 ☺");
+
+        let dom2 = parse("<p>&hearts;</p");
+        assert_eq!(dom2.inner_text(), "♥");
     }
 
     #[test]
