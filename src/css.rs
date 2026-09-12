@@ -48,6 +48,7 @@ pub struct SimpleSelector {
 pub struct Declaration {
     pub name: String,
     pub value: Value,
+    pub important: bool,
 }
 
 /// A CSS value. We keep just the shapes layout and paint care about.
@@ -294,12 +295,18 @@ impl<'a> Parser<'a> {
         self.bump();
         self.skip_ws_and_comments();
         let value = self.parse_value()?;
-        // Skip anything up to the terminating ';' or '}' (e.g. "!important").
+        self.skip_ws_and_comments();
+        let important = self.input[self.pos..].starts_with("!important");
+        // Skip anything up to the terminating ';' or '}'
         self.skip_until_any(&[';', '}']);
         if name.is_empty() {
             None
         } else {
-            Some(Declaration { name, value })
+            Some(Declaration {
+                name,
+                value,
+                important,
+            })
         }
     }
 
@@ -612,8 +619,6 @@ fn named_color(name: &str) -> Option<Color> {
 
 #[cfg(test)]
 mod tests {
-    use std::println;
-
     use super::*;
 
     #[test]
@@ -769,5 +774,19 @@ mod tests {
         let decls = parse_declarations("color: red; font-size: 14px");
         assert_eq!(decls.len(), 2);
         assert_eq!(decls[1].value, Value::Length(14.0, Unit::Px));
+    }
+
+    #[test]
+    fn important_rule() {
+        let res =
+            parse("a {color: red } a {color: pink } a { color: blue !important; font-size: 67px }");
+        assert!(!res.rules[0].declarations[0].important);
+        assert!(!res.rules[1].declarations[0].important);
+        assert!(res.rules[2].declarations[0].important);
+        assert!(!res.rules[2].declarations[1].important);
+        assert_eq!(
+            res.rules[2].declarations[0].value,
+            Value::ColorValue(Color::rgb(0, 0, 255)),
+        );
     }
 }
