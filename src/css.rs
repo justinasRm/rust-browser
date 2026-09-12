@@ -127,7 +127,7 @@ impl Value {
     }
 }
 
-/// Parse a whole stylesheet.
+// Parse a whole stylesheet.
 pub fn parse(source: &str) -> Stylesheet {
     let mut parser = Parser {
         input: source,
@@ -484,9 +484,39 @@ fn is_identifier_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '-' || c == '_'
 }
 
+fn hsl_to_rgb(h: f32, s: f32, l: f32) -> Color {
+    let h = h.rem_euclid(360.0);
+    let s = (s / 100.0).clamp(0.0, 1.0);
+    let l = (l / 100.0).clamp(0.0, 1.0);
+
+    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+    let m = l - c / 2.0;
+
+    let (r, g, b) = if h < 60.0 {
+        (c, x, 0.0)
+    } else if h < 120.0 {
+        (x, c, 0.0)
+    } else if h < 180.0 {
+        (0.0, c, x)
+    } else if h < 240.0 {
+        (0.0, x, c)
+    } else if h < 300.0 {
+        (x, 0.0, c)
+    } else {
+        (c, 0.0, x)
+    };
+
+    Color::rgb(
+        ((r + m) * 255.0).round() as u8,
+        ((g + m) * 255.0).round() as u8,
+        ((b + m) * 255.0).round() as u8,
+    )
+}
+
 fn parse_color_function(word: &str, parser: &mut Parser) -> Option<Color> {
     let fname = word.to_ascii_lowercase();
-    if fname != "rgb" && fname != "rgba" {
+    if fname != "rgb" && fname != "rgba" && fname != "hsl" && fname != "hsla" {
         return None;
     }
     // We're positioned at '(' (parse_value_word stops before it).
@@ -509,12 +539,20 @@ fn parse_color_function(word: &str, parser: &mut Parser) -> Option<Color> {
     } else {
         255
     };
-    Some(Color {
-        r: args[0] as u8,
-        g: args[1] as u8,
-        b: args[2] as u8,
-        a,
-    })
+
+    if fname == "hsl" || fname == "hsla" {
+        Some(Color {
+            a,
+            ..hsl_to_rgb(args[0], args[1], args[2])
+        })
+    } else {
+        Some(Color {
+            r: args[0] as u8,
+            g: args[1] as u8,
+            b: args[2] as u8,
+            a,
+        })
+    }
 }
 
 fn parse_hex(hex: &str) -> Option<Color> {
@@ -574,6 +612,8 @@ fn named_color(name: &str) -> Option<Color> {
 
 #[cfg(test)]
 mod tests {
+    use std::println;
+
     use super::*;
 
     #[test]
@@ -613,6 +653,30 @@ mod tests {
         assert_eq!(d[1].value, Value::Length(1.5, Unit::Em));
         assert_eq!(d[1].value.to_px(), 24.0);
         assert!((d[2].value.to_px() - 16.0).abs() < 0.01); // 12pt == 16px
+    }
+
+    #[test]
+    fn hsl() {
+        let ss = parse("a { color: hsl(120, 100%, 50%) }");
+        assert_eq!(
+            ss.rules[0].declarations[0].value,
+            Value::ColorValue(Color {
+                a: 255,
+                ..Color::rgb(0, 255, 0)
+            })
+        )
+    }
+
+    #[test]
+    fn hsla() {
+        let ss = parse("a { color: hsla(120, 100%, 50%, 0.2) } b { color: rgb(255, 255, 255) }");
+        assert_eq!(
+            ss.rules[0].declarations[0].value,
+            Value::ColorValue(Color {
+                a: 51,
+                ..Color::rgb(0, 255, 0)
+            })
+        )
     }
 
     #[test]
