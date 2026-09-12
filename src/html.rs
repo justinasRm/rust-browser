@@ -532,7 +532,27 @@ mod tests {
 
     use super::*;
     use crate::dom::pretty_print;
+    #[test]
+    fn handles_title_attributes() {
+        let dom = parse("<title lang=\"en\">Hi</title>");
+        let element = dom.children[0].element().unwrap();
+        assert_eq!(element.get_attribute("lang"), Some("en"));
+    }
 
+    #[test]
+    fn handles_title_whitespace() {
+        let dom = parse("<title lang=\"en\">Hi</title ><p>abcd</p>");
+        assert_eq!(dom.children.len(), 2);
+
+        let title = &dom.children[0];
+        assert_eq!(title.tag_name(), Some("title"));
+        assert_eq!(title.inner_text(), "Hi");
+        assert_eq!(title.element().unwrap().get_attribute("lang"), Some("en"),);
+
+        let paragraph = &dom.children[1];
+        assert_eq!(paragraph.tag_name(), Some("p"));
+        assert_eq!(paragraph.inner_text(), "abcd");
+    }
     #[test]
     fn handles_cdata() {
         let dom = parse("<div><![CDATA[<p>abcd &amp;</p>]]></div>");
