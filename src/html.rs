@@ -184,6 +184,8 @@ impl<'a, 'b> Tokenizer<'a, 'b> {
         while self.pos < self.input.len() {
             if self.starts_with("<!--") {
                 self.parse_comment();
+            } else if self.starts_with("<![CDATA[") {
+                self.parse_cdata();
             } else if self.starts_with("<!") || self.starts_with("<?") {
                 // Doctype or processing instruction - skip to the next '>'.
                 self.skip_until_byte(b'>');
@@ -424,6 +426,19 @@ impl<'a, 'b> Tokenizer<'a, 'b> {
             }
         }
     }
+
+    fn parse_cdata(&mut self) {
+        self.pos += 9; // consume '<![CDATA['
+        let start = self.pos;
+        while self.pos < self.input.len() && !self.starts_with_bytes(b"]]>") {
+            self.pos += 1;
+        }
+        let raw = &self.chars[start..self.pos];
+        self.builder.text(raw.to_string());
+        if self.starts_with_bytes(b"]]>") {
+            self.pos += 3; // consume ']]>'
+        }
+    }
 }
 
 // --- Entities ---------------------------------------------------------------
@@ -517,6 +532,22 @@ mod tests {
 
     use super::*;
     use crate::dom::pretty_print;
+
+    #[test]
+    fn handles_cdata() {
+        let dom = parse("<div><![CDATA[<p>abcd &amp;</p>]]></div>");
+        assert_eq!(dom.inner_text(), "<p>abcd &amp;</p>");
+        let dump = pretty_print(&dom);
+        assert!(dump.contains("<div>"));
+        assert_eq!(dom.children.len(), 1);
+        assert_eq!(dom.children[0].tag_name(), Some("div"));
+    }
+
+    #[test]
+    fn handles_unclosed_cdata() {
+        let dom = parse("<div><![CDATA[hello");
+        assert_eq!(dom.inner_text(), "hello");
+    }
 
     #[test]
     fn parses_basic_nesting() {
