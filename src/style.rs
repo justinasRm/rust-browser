@@ -22,7 +22,9 @@
 
 use std::collections::HashMap;
 
-use crate::css::{self, Rule, Selector, SimpleSelector, Specificity, Stylesheet, Value};
+use crate::css::{
+    self, Declaration, Rule, Selector, SimpleSelector, Specificity, Stylesheet, Value,
+};
 use crate::dom::{ElementData, Node, NodeType};
 
 /// A node's fully-resolved property values, keyed by lower-case property name.
@@ -107,6 +109,24 @@ fn style_node<'a>(
     }
 }
 
+fn shorthand_expansion(declaration: &Declaration, values: &mut PropertyMap) {
+    if declaration.name != "font" {
+        return;
+    }
+    let Value::List(items) = &declaration.value else {
+        return;
+    };
+    if let [Value::Keyword(weight), Value::Length(size, unit), Value::Keyword(family)] =
+        items.as_slice()
+    {
+        if matches!(weight.as_str(), "normal" | "bold" | "bolder" | "lighter") {
+            values.insert("font-weight".into(), Value::Keyword(weight.clone()));
+            values.insert("font-size".into(), Value::Length(*size, *unit));
+            values.insert("font-family".into(), Value::Keyword(family.clone()));
+        }
+    }
+}
+
 /// Resolve one element's properties: inherited values first, then matched rules
 /// in cascade order, then the inline `style` attribute.
 fn specified_values(
@@ -131,9 +151,9 @@ fn specified_values(
         }
     }
     matches.sort_by(|a, b| a.0.cmp(&b.0)); // ascending: low specificity applied first
-
     for (_, rule) in matches {
         for decl in &rule.declarations {
+            shorthand_expansion(decl, &mut values);
             values.insert(decl.name.clone(), decl.value.clone());
         }
     }
@@ -141,6 +161,7 @@ fn specified_values(
     // Inline styles beat any selector.
     if let Some(style_attr) = elem.get_attribute("style") {
         for decl in css::parse_declarations(style_attr) {
+            shorthand_expansion(&decl, &mut values);
             values.insert(decl.name, decl.value);
         }
     }
@@ -462,6 +483,60 @@ mod tests {
         assert_eq!(
             h1.value("color"),
             Some(Value::ColorValue(css::Color::rgb(255, 0, 0)))
+        );
+    }
+
+    #[test]
+    fn font_shorthand() {
+        let dom = html::parse("<span id=a>xd</span>");
+        let styled = style_tree(
+            &dom,
+            &css::parse("#a { font: bold 14px sans-serif; padding-top: 5px }"),
+        );
+        let span = find_tag(&styled, "span").unwrap();
+        assert_eq!(
+            span.value("font-size"),
+            Some(Value::Length(14.0, css::Unit::Px))
+        );
+        assert_eq!(
+            span.value("font-weight"),
+            Some(Value::Keyword("bold".into()))
+        );
+    }
+
+    #[test]
+    fn font_shorthand_overwrite() {
+        let dom = html::parse("<span id=a>xd</span>");
+        let styled = style_tree(
+            &dom,
+            &css::parse("#a { font: bold 14px sans-serif; font-size: 20px }"),
+        );
+        let span = find_tag(&styled, "span").unwrap();
+        assert_eq!(
+            span.value("font-size"),
+            Some(Value::Length(20.0, css::Unit::Px))
+        );
+        assert_eq!(
+            span.value("font-weight"),
+            Some(Value::Keyword("bold".into()))
+        );
+    }
+
+    #[test]
+    fn font_shorthand_inline() {
+        let dom = html::parse("<span id=a style='font: bold 16px monospace'>xd</span>");
+        let styled = style_tree(
+            &dom,
+            &css::parse("#a { font: bold 14px sans-serif; font-size: 20px }"),
+        );
+        let span = find_tag(&styled, "span").unwrap();
+        assert_eq!(
+            span.value("font-size"),
+            Some(Value::Length(16.0, css::Unit::Px))
+        );
+        assert_eq!(
+            span.value("font-weight"),
+            Some(Value::Keyword("bold".into()))
         );
     }
 
