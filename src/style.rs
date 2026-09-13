@@ -158,6 +158,9 @@ fn apply_presentational_hints(elem: &ElementData, values: &mut PropertyMap) {
     if let Some(bg) = elem.get_attribute("bgcolor") {
         set("background-color", &normalize_color(bg));
     }
+    if let Some(c) = elem.get_attribute("text") {
+        set("color", &normalize_color(c));
+    }
     if let Some(w) = elem.get_attribute("width") {
         set("width", w);
     }
@@ -229,6 +232,7 @@ const INHERITED_PROPERTIES: &[&str] = &[
     "white-space",
     "list-style-type",
     "visibility",
+    "text-decoration",
 ];
 
 fn inheritable_subset(values: &PropertyMap) -> PropertyMap {
@@ -320,6 +324,8 @@ td, th { display: block; }
 
 #[cfg(test)]
 mod tests {
+    use std::assert_eq;
+
     use super::*;
     use crate::html;
 
@@ -425,6 +431,38 @@ mod tests {
     #[test]
     fn unmatched_color_is_none_at_root() {
         assert_eq!(style("<html></html>", ""), "None");
+    }
+
+    #[test]
+    fn text_decoration_inherit() {
+        let dom = html::parse("<div id=abcdId><span>xd</span></div>");
+        let styled = style_tree(&dom, &css::parse("#abcdId { text-decoration: underline; }"));
+        let span = find_tag(&styled, "span").unwrap();
+        assert_eq!(
+            span.value("text-decoration"),
+            Some(Value::Keyword("underline".to_string()))
+        );
+    }
+
+    #[test]
+    fn color_presentational_hint() {
+        //
+        // <body text="...">
+        // ff0000
+        let dom = html::parse(
+            "<div text=\"black\"><span>xd</span></div> <h1 text=\"ff0000\"><h2>xd</h2></h1>",
+        );
+        let styled = style_tree(&dom, &css::parse(""));
+        let span = find_tag(&styled, "span").unwrap();
+        assert_eq!(
+            span.value("color"),
+            Some(Value::ColorValue(css::Color::rgb(0, 0, 0)))
+        );
+        let h1 = find_tag(&styled, "h1").unwrap();
+        assert_eq!(
+            h1.value("color"),
+            Some(Value::ColorValue(css::Color::rgb(255, 0, 0)))
+        );
     }
 
     // Depth-first search for the first element with the given tag.

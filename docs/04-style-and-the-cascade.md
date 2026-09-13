@@ -10,7 +10,7 @@ Two different rules can both want to set an element's `color`. Which one wins? T
 
 1. **Inherit** - start with the properties handed down from the parent (`color`, `font-size`, …). A child with no rules of its own still gets its parent's text color.
 2. **Presentational hints** - map a few legacy HTML attributes (`bgcolor`, `width`, `height`) onto CSS. These sit at the very bottom of the pile so author CSS can always beat them.
-3. **Matched rules** - collect every rule whose selector matches the element, from the user-agent sheet *and* the page's author sheet, then sort by **specificity** (`#id` beats `.class` beats `tag`). Ties keep **source order**, with the UA sheet applied before author rules so author rules win.
+3. **Matched rules** - collect every rule whose selector matches the element, from the user-agent sheet _and_ the page's author sheet, then sort by **specificity** (`#id` beats `.class` beats `tag`). Ties keep **source order**, with the UA sheet applied before author rules so author rules win.
 4. **Inline `style="..."`** - applied last, so it beats every selector.
 
 Each later layer simply overwrites earlier ones in a `HashMap`, so "later wins" falls out for free.
@@ -21,7 +21,7 @@ Why does plain, unstyled HTML still look like a document - paragraphs stacked, h
 
 ### Presentational attributes
 
-Old HTML carried style in attributes: `<table bgcolor="ff6600">`, `<td width="85%">`. `apply_presentational_hints()` maps these onto CSS (`bgcolor` → `background-color`, etc.). It applies them *before* matched rules, so they act as the weakest possible source - exactly how real browsers treat them. (Hacker News's orange bar is a `bgcolor` attribute.)
+Old HTML carried style in attributes: `<table bgcolor="ff6600">`, `<td width="85%">`. `apply_presentational_hints()` maps these onto CSS (`bgcolor` → `background-color`, etc.). It applies them _before_ matched rules, so they act as the weakest possible source - exactly how real browsers treat them. (Hacker News's orange bar is a `bgcolor` attribute.)
 
 ## Walking the code
 
@@ -100,7 +100,7 @@ fn specified_values(elem, ua, author, inherited) -> PropertyMap {
 }
 ```
 
-A rule matches if *any* of its selectors matches; `match_rule()` returns the best specificity among them:
+A rule matches if _any_ of its selectors matches; `match_rule()` returns the best specificity among them:
 
 ```rust
 fn match_rule(elem: &ElementData, rule: &Rule) -> Option<Specificity> {
@@ -112,7 +112,7 @@ fn match_rule(elem: &ElementData, rule: &Rule) -> Option<Specificity> {
 }
 ```
 
-The actual matching is `matches_simple()`: a selector matches when its tag name (if any) equals the element's, its `#id` (if any) equals the element's, and *every* class it names is on the element.
+The actual matching is `matches_simple()`: a selector matches when its tag name (if any) equals the element's, its `#id` (if any) equals the element's, and _every_ class it names is on the element.
 
 ```rust
 fn matches_simple(elem: &ElementData, selector: &SimpleSelector) -> bool {
@@ -146,27 +146,49 @@ fn inheritable_subset(values: &PropertyMap) -> PropertyMap {
 }
 ```
 
-Notice what is *not* there: `margin`, `background-color`, `width`. Those are deliberately non-inherited, so a box's background never leaks onto its children.
+Notice what is _not_ there: `margin`, `background-color`, `width`. Those are deliberately non-inherited, so a box's background never leaks onto its children.
 
 Finally, a peek at `UA_CSS` - the defaults, written as ordinary CSS:
 
 ```css
-html, body, div, section, /* … */ p, ul, ol, li { display: block; }
-head, script, style, meta, link, title { display: none; }
-li { display: list-item; }
-body { margin: 8px; color: #000000; font-size: 16px; line-height: 1.3; }
-h1 { font-size: 32px; font-weight: bold; margin: 16px; }
-a  { color: #0000ee; }
+html, body, div, section, /* … */ p, ul, ol, li {
+	display: block;
+}
+head,
+script,
+style,
+meta,
+link,
+title {
+	display: none;
+}
+li {
+	display: list-item;
+}
+body {
+	margin: 8px;
+	color: #000000;
+	font-size: 16px;
+	line-height: 1.3;
+}
+h1 {
+	font-size: 32px;
+	font-weight: bold;
+	margin: 16px;
+}
+a {
+	color: #0000ee;
+}
 ```
 
 `document_stylesheet()` (via `inline_css()`) gathers a page's author CSS by concatenating the text of every `<style>` block and parsing it - that's the sheet `style_tree()` cascades on top of the UA defaults.
 
 ## Rust notes
 
-- **Lifetimes.** `StyledNode<'a>` holds `node: &'a Node` - it *borrows* the DOM rather than copying it. The `'a` says "this styled node can't outlive the DOM it points at," which the compiler enforces for free. No duplicated tree, no dangling pointers.
+- **Lifetimes.** `StyledNode<'a>` holds `node: &'a Node` - it _borrows_ the DOM rather than copying it. The `'a` says "this styled node can't outlive the DOM it points at," which the compiler enforces for free. No duplicated tree, no dangling pointers.
 - **`HashMap` as `PropertyMap`.** Resolved values live in a `HashMap<String, Value>`. Cascading is then just repeated `insert()`s where "later wins" is the map's natural overwrite behavior.
 - **Closures.** `apply_presentational_hints()` defines a local `let mut set = |prop, raw| { … };` closure to avoid repeating the parse-and-insert dance for `bgcolor`, `width`, and `height`. It captures `values` mutably, so calling it edits the map in place.
-- **Stable sort for source order.** `matches.sort_by(...)` is a *stable* sort, so rules with equal specificity stay in the order they were collected - UA before author. That's why a UA `a { color: #0000ee }` and an author `a { color: red }` resolve to red without any extra tie-break code.
+- **Stable sort for source order.** `matches.sort_by(...)` is a _stable_ sort, so rules with equal specificity stay in the order they were collected - UA before author. That's why a UA `a { color: #0000ee }` and an author `a { color: red }` resolve to red without any extra tie-break code.
 
 ## Try it
 
@@ -178,11 +200,11 @@ cargo test style
 
 You'll see the cascade in action: `author_rules_override_user_agent`, `specificity_decides_between_author_rules`, `inline_style_wins`, `color_is_inherited`, and `ua_stylesheet_sets_display`.
 
-To *see* the user-agent sheet's effect, render a plain HTML file with no `<style>` at all. Paragraphs still stack as blocks, the `<head>` and `<script>` vanish, headings come out big and bold, and links are blue - all of that comes from `UA_CSS`, not the page.
+To _see_ the user-agent sheet's effect, render a plain HTML file with no `<style>` at all. Paragraphs still stack as blocks, the `<head>` and `<script>` vanish, headings come out big and bold, and links are blue - all of that comes from `UA_CSS`, not the page.
 
 ## Exercises
 
-1. **Add an inherited property.** Add `"text-decoration"` to `INHERITED_PROPERTIES`, set it on a parent, and confirm a child picks it up. Then try `"background-color"` and convince yourself why it is *not* in the list (a parent's background should not paint over its children).
+1. **Add an inherited property.** Add `"text-decoration"` to `INHERITED_PROPERTIES`, set it on a parent, and confirm a child picks it up. Then try `"background-color"` and convince yourself why it is _not_ in the list (a parent's background should not paint over its children).
 
 2. **A new presentational hint.** The old `<body text="...">` attribute set the document text color. Extend `apply_presentational_hints()` to map `text` → `color`. Remember to run the value through something like `normalize_color()` so bare hex (`text=ff0000`) still works.
 
