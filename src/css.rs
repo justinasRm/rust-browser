@@ -19,7 +19,7 @@
 //! (an `@media` block, an exotic value, a malformed rule) is skipped rather than
 //! aborting the parse.
 
-use std::println;
+use std::{println, todo};
 
 /// A parsed stylesheet: just an ordered list of rules.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -294,12 +294,13 @@ impl<'a> Parser<'a> {
     fn parse_declaration(&mut self) -> Option<Declaration> {
         let name = self.parse_identifier().to_ascii_lowercase();
         self.skip_ws_and_comments();
+        println!("name: {}", name);
         if self.next_char() != ':' {
             return None;
         }
         self.bump();
         self.skip_ws_and_comments();
-        let value = self.parse_value()?;
+        let value = self.parse_values()?;
         println!("value: {:?}", value);
         self.skip_ws_and_comments();
         let important = self.input[self.pos..].starts_with("!important");
@@ -313,6 +314,30 @@ impl<'a> Parser<'a> {
                 value,
                 important,
             })
+        }
+    }
+
+    fn parse_values(&mut self) -> Option<Value> {
+        //
+        let mut values = Vec::new();
+        loop {
+            self.skip_ws_and_comments();
+
+            match self.next_char() {
+                ';' | '}' | '!' | '\0' => break,
+                _ => {}
+            }
+
+            let Some(value) = self.parse_value() else {
+                break;
+            };
+            values.push(value);
+        }
+
+        match values.len() {
+            0 => None,
+            1 => values.pop(),
+            _ => Some(Value::List(values)),
         }
     }
 
@@ -340,31 +365,24 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_length(&mut self) -> Option<Value> {
-        let mut res: Vec<Value> = vec![];
-        while let Some(number) = self.parse_number() {
-            let unit = match self
-                .parse_identifier_or_percent()
-                .to_ascii_lowercase()
-                .as_str()
-            {
-                "px" | "" => Unit::Px,
-                "em" => Unit::Em,
-                "rem" => Unit::Rem,
-                "pt" => Unit::Pt,
-                "%" => Unit::Percent,
-                "vw" => Unit::Vw,
-                "vh" => Unit::Vh,
-                "ch" => Unit::Ch,
-                // Unknown unit: treat as px so we degrade gracefully.
-                _ => Unit::Px,
-            };
-            res.push(Value::Length(number, unit));
-            self.skip_ws_and_comments();
-        }
-        if res.len() == 1 {
-            return res.pop();
-        }
-        Some(Value::List(res))
+        let number = self.parse_number()?;
+        let unit = match self
+            .parse_identifier_or_percent()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "px" | "" => Unit::Px,
+            "em" => Unit::Em,
+            "rem" => Unit::Rem,
+            "pt" => Unit::Pt,
+            "%" => Unit::Percent,
+            "vw" => Unit::Vw,
+            "vh" => Unit::Vh,
+            "ch" => Unit::Ch,
+            // Unknown unit: treat as px so we degrade gracefully.
+            _ => Unit::Px,
+        };
+        Some(Value::Length(number, unit))
     }
 
     fn parse_hex_color(&mut self) -> Option<Value> {
@@ -828,6 +846,18 @@ mod tests {
         assert_eq!(
             ss.rules[0].declarations[1].value,
             Value::Length(20.0, Unit::Rem),
+        );
+    }
+
+    #[test]
+    fn font_shorthand() {
+        let ss = parse("p { font: 14px bold; padding: 20rem }");
+        assert_eq!(
+            ss.rules[0].declarations[0].value,
+            Value::List(vec![
+                Value::Length(14.0, Unit::Px),
+                Value::Keyword("bold".into()),
+            ])
         );
     }
 }
