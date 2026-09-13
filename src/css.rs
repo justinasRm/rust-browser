@@ -19,6 +19,8 @@
 //! (an `@media` block, an exotic value, a malformed rule) is skipped rather than
 //! aborting the parse.
 
+use std::println;
+
 /// A parsed stylesheet: just an ordered list of rules.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Stylesheet {
@@ -57,6 +59,7 @@ pub enum Value {
     Keyword(String),
     Length(f32, Unit),
     ColorValue(Color),
+    List(Vec<Value>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -297,6 +300,7 @@ impl<'a> Parser<'a> {
         self.bump();
         self.skip_ws_and_comments();
         let value = self.parse_value()?;
+        println!("value: {:?}", value);
         self.skip_ws_and_comments();
         let important = self.input[self.pos..].starts_with("!important");
         // Skip anything up to the terminating ';' or '}'
@@ -336,24 +340,31 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_length(&mut self) -> Option<Value> {
-        let number = self.parse_number()?;
-        let unit = match self
-            .parse_identifier_or_percent()
-            .to_ascii_lowercase()
-            .as_str()
-        {
-            "px" | "" => Unit::Px,
-            "em" => Unit::Em,
-            "rem" => Unit::Rem,
-            "pt" => Unit::Pt,
-            "%" => Unit::Percent,
-            "vw" => Unit::Vw,
-            "vh" => Unit::Vh,
-            "ch" => Unit::Ch,
-            // Unknown unit: treat as px so we degrade gracefully.
-            _ => Unit::Px,
-        };
-        Some(Value::Length(number, unit))
+        let mut res: Vec<Value> = vec![];
+        while let Some(number) = self.parse_number() {
+            let unit = match self
+                .parse_identifier_or_percent()
+                .to_ascii_lowercase()
+                .as_str()
+            {
+                "px" | "" => Unit::Px,
+                "em" => Unit::Em,
+                "rem" => Unit::Rem,
+                "pt" => Unit::Pt,
+                "%" => Unit::Percent,
+                "vw" => Unit::Vw,
+                "vh" => Unit::Vh,
+                "ch" => Unit::Ch,
+                // Unknown unit: treat as px so we degrade gracefully.
+                _ => Unit::Px,
+            };
+            res.push(Value::Length(number, unit));
+            self.skip_ws_and_comments();
+        }
+        if res.len() == 1 {
+            return res.pop();
+        }
+        Some(Value::List(res))
     }
 
     fn parse_hex_color(&mut self) -> Option<Value> {
@@ -799,6 +810,24 @@ mod tests {
         assert_eq!(
             res.rules[2].declarations[0].value,
             Value::ColorValue(Color::rgb(0, 0, 255)),
+        );
+    }
+
+    #[test]
+    fn lists() {
+        let ss = parse("p { margin: 10px 20px 2003px 2004px; padding: 20rem }");
+        assert_eq!(
+            ss.rules[0].declarations[0].value,
+            Value::List(vec![
+                Value::Length(10.0, Unit::Px),
+                Value::Length(20.0, Unit::Px),
+                Value::Length(2003.0, Unit::Px),
+                Value::Length(2004.0, Unit::Px)
+            ])
+        );
+        assert_eq!(
+            ss.rules[0].declarations[1].value,
+            Value::Length(20.0, Unit::Rem),
         );
     }
 }
