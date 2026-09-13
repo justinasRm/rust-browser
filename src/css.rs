@@ -69,6 +69,7 @@ pub enum Unit {
     /// Viewport width / height percentages (`1vw` = 1% of the viewport width).
     Vw,
     Vh,
+    Ch,
 }
 
 /// An 8-bit-per-channel RGBA color.
@@ -114,6 +115,7 @@ impl Value {
         match self {
             Value::Length(n, Unit::Px) => *n,
             Value::Length(n, Unit::Pt) => n * 96.0 / 72.0,
+            Value::Length(n, Unit::Ch) => n * 8.0,
             Value::Length(n, Unit::Em) | Value::Length(n, Unit::Rem) => n * 16.0,
             _ => 0.0,
         }
@@ -347,6 +349,7 @@ impl<'a> Parser<'a> {
             "%" => Unit::Percent,
             "vw" => Unit::Vw,
             "vh" => Unit::Vh,
+            "ch" => Unit::Ch,
             // Unknown unit: treat as px so we degrade gracefully.
             _ => Unit::Px,
         };
@@ -658,6 +661,15 @@ mod tests {
         assert_eq!(d[1].value, Value::Length(1.5, Unit::Em));
         assert_eq!(d[1].value.to_px(), 24.0);
         assert!((d[2].value.to_px() - 16.0).abs() < 0.01); // 12pt == 16px
+    }
+
+    #[test]
+    fn ch_unit() {
+        let ss = parse("p { margin: 10ch }");
+        let d = &ss.rules[0].declarations;
+        assert_eq!(d[0].value, Value::Length(10.0, Unit::Ch));
+        let px_val = ss.rules[0].declarations[0].value.to_px();
+        assert_eq!(px_val, 80.0);
     }
 
     #[test]
