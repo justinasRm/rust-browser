@@ -6,6 +6,8 @@
 
 use std::process::ExitCode;
 
+mod get_screen_width;
+
 use robin::css::Color;
 use robin::layout::{Dimensions, Rect};
 use robin::{css, dom, html, layout, net, paint, render, style};
@@ -164,7 +166,7 @@ fn ensure_parent_dir(path: &str) {
 
 fn parse_args(args: &[String]) -> Result<Options, String> {
     let mut target = None;
-    let mut width = DEFAULT_WIDTH;
+    let mut width = None;
     let mut clip_top = None;
     let mut clip_height = None;
     let mut mode = None;
@@ -181,10 +183,11 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
             }
             "--width" => {
                 i += 1;
-                width = args
-                    .get(i)
-                    .and_then(|w| w.parse().ok())
-                    .ok_or("--width needs a number")?;
+                width = Some(
+                    args.get(i)
+                        .and_then(|w| w.parse().ok())
+                        .ok_or("--width needs a number")?,
+                );
             }
             "--clip-height" => {
                 i += 1;
@@ -212,7 +215,8 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
     let mode = mode.unwrap_or_else(|| Mode::Png("out/page.png".to_string()));
     Ok(Options {
         target,
-        width,
+        width: width
+            .unwrap_or_else(|| get_screen_width::get_screen_width().unwrap_or(DEFAULT_WIDTH)),
         clip_top,
         clip_height,
         mode,
@@ -229,7 +233,7 @@ fn print_usage() {
          OPTIONS:\n    \
              --window         Open an interactive, scrollable window\n    \
              --png <FILE>     Render the page to a PNG (default: out/page.png)\n    \
-             --width <PX>     Viewport width in pixels (default: {})\n    \
+             --width <PX>     Viewport width (default: screen width, fallback {})\n    \
              --clip-top <PX>  Skip the top PX pixels when saving (scroll offset)\n    \
              --clip-height <PX>  Cap the rendered height (for thumbnails)\n    \
              --dump-dom       Print the parsed DOM tree and exit\n    \
