@@ -12,24 +12,28 @@
 
 use minifb::{Key, Scale, ScaleMode, Window, WindowOptions};
 
+use crate::get_screen_dimensions;
 use crate::render::Canvas;
 
 /// Open a window showing `canvas`, scrollable until the user closes it (or hits
 /// Escape / `q`).
 pub fn show(canvas: &Canvas, title: &str) -> Result<(), String> {
     let view_w = canvas.width;
-    // The visible height is capped so the window fits on screen even for a very
-    // tall page.
-    let view_h = canvas.height.clamp(1, 800);
+    // Fill usable screen height, keeping the toolbar inside the window.
+    let toolbar_h = 100;
+    let window_h = get_screen_dimensions::get_window_height()
+        .unwrap_or(700)
+        .max(toolbar_h + 1);
+    let view_h = window_h - toolbar_h;
 
     let mut window = Window::new(
         title,
         view_w,
-        view_h,
+        window_h,
         WindowOptions {
             resize: false,
             scale: Scale::X1,
-            scale_mode: ScaleMode::Stretch,
+            scale_mode: ScaleMode::AspectRatioStretch,
             ..WindowOptions::default()
         },
     )
@@ -44,7 +48,7 @@ pub fn show(canvas: &Canvas, title: &str) -> Result<(), String> {
     let mut target_scroll: f64 = 0.0;
     let mut last_frame = std::time::Instant::now();
 
-    let mut view = vec![0u32; view_w * view_h];
+    let mut view = vec![0u32; view_w * window_h];
 
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
         let now = std::time::Instant::now();
@@ -58,14 +62,14 @@ pub fn show(canvas: &Canvas, title: &str) -> Result<(), String> {
 
         blit_view(
             &page,
-            &mut view,
+            &mut view[toolbar_h * view_w..],
             view_w,
             view_h,
             canvas.height,
             scroll.round() as usize,
         );
         window
-            .update_with_buffer(&view, view_w, view_h)
+            .update_with_buffer(&view, view_w, window_h)
             .map_err(|e| e.to_string())?;
     }
     Ok(())

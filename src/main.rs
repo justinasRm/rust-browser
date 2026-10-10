@@ -6,13 +6,13 @@
 
 use std::process::ExitCode;
 
-mod get_screen_width;
+use robin::get_screen_dimensions;
 
 use robin::css::Color;
 use robin::layout::{Dimensions, Rect};
 use robin::{css, dom, html, layout, net, paint, render, style};
 
-const DEFAULT_WIDTH: f32 = 1000.0;
+const DEFAULT_WIDTH: f64 = 1000.0;
 
 struct Options {
     target: String,
@@ -215,8 +215,9 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
     let mode = mode.unwrap_or_else(|| Mode::Png("out/page.png".to_string()));
     Ok(Options {
         target,
-        width: width
-            .unwrap_or_else(|| get_screen_width::get_screen_width().unwrap_or(DEFAULT_WIDTH)),
+        width: width.unwrap_or_else(|| {
+            get_screen_dimensions::get_screen_width().unwrap_or(DEFAULT_WIDTH) as f32
+        }),
         clip_top,
         clip_height,
         mode,

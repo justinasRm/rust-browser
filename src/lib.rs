@@ -32,6 +32,7 @@
 
 pub mod css;
 pub mod dom;
+pub mod get_screen_dimensions;
 pub mod html;
 pub mod layout;
 pub mod net;

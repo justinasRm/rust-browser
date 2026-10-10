@@ -208,15 +208,14 @@ impl Node {
             stack: self.children.iter().rev().collect(),
         }
     }
-    fn node_count(&self) -> usize {
-        //
+    pub fn node_count(&self) -> usize {
         let mut count: usize = 1;
         for child in &self.children {
             count += child.node_count();
         }
         count
     }
-    fn find_by_tag<'a>(&'a self, tag: &str, out: &mut Vec<&'a Node>) {
+    pub fn find_by_tag<'a>(&'a self, tag: &str, out: &mut Vec<&'a Node>) {
         if let Some(tag_match) = self.tag_name() {
             if tag_match == tag {
                 out.push(self);

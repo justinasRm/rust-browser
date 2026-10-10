@@ -19,8 +19,6 @@
 //! (an `@media` block, an exotic value, a malformed rule) is skipped rather than
 //! aborting the parse.
 
-use std::{println, todo};
-
 /// A parsed stylesheet: just an ordered list of rules.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Stylesheet {
@@ -294,14 +292,12 @@ impl<'a> Parser<'a> {
     fn parse_declaration(&mut self) -> Option<Declaration> {
         let name = self.parse_identifier().to_ascii_lowercase();
         self.skip_ws_and_comments();
-        println!("name: {}", name);
         if self.next_char() != ':' {
             return None;
         }
         self.bump();
         self.skip_ws_and_comments();
         let value = self.parse_values()?;
-        println!("value: {:?}", value);
         self.skip_ws_and_comments();
         let important = self.input[self.pos..].starts_with("!important");
         // Skip anything up to the terminating ';' or '}'
