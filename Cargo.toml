@@ -15,7 +15,7 @@ categories = ["web-programming", "rendering"]
 # easy for a coding agent to navigate.
 [lib]
 name = "robin"
-path = "src/lib.rs"
+path = "src/engine/mod.rs"
 
 [[bin]]
 name = "robin"

@@ -1,187 +1,85 @@
-# 🐦 Robin - build a web browser engine from scratch in Rust
+# Robin
 
-> A tiny, readable browser **engine** - not a Chromium or WebKit wrapper. Every
-> stage that turns bytes on the wire into pixels on the screen is implemented
-> here in plain Rust, one commit at a time, so you can learn how browsers (and
-> Rust) actually work.
+A browser project to learn Rust and understand how web browsers
+work, from parsing HTML and CSS to drawing pixels on screen.
 
-<p align="center">
-  <img src="docs/images/demo.gif" alt="Robin rendering and scrolling Hacker News" width="720">
-</p>
+The project is a fork of [Addy Osmani’s Robin](https://github.com/addyosmani/rust-browser).
 
-Robin is a modern, from-scratch reimagining of the classic
-[_Intro to Rust: building a browser engine_](https://steemit.com/utopianio/@tensor/intro-to-rust-building-a-browser-engine-dom-and-html-parser)
-tutorial (itself inspired by Matt Brubeck's _Let's build a browser engine!_ /
-**robinson** - hence the name **Robin**). The original is wonderful but now
-abandoned and outdated; this repo brings the same idea up to modern Rust, makes
-it render _real_ pages, and is built to be **agent-first** so you can point a
-coding agent at it and learn by doing.
+## What works
 
-## It renders real pages
+- HTML parsing, a DOM, and CSS selectors, cascading, and inheritance.
+- Block and inline layout, text wrapping, and software rendering with bundled fonts.
+- Loading pages over HTTP/HTTPS or from local files.
+- An egui desktop UI with an address bar, background loading, and scrolling.
 
-No JavaScript, no flexbox, no GPU - just a parser, a cascade, a layout engine and
-a software rasterizer, all hand-written. Yet it's enough to read the web:
+The page engine is implemented in Rust without Chromium or WebKit. egui handles
+the browser interface; the engine renders the page itself.
 
-|                         Hacker News                          |                         Wikipedia                         |                   Google (no-JS)                    |
-| :----------------------------------------------------------: | :-------------------------------------------------------: | :-------------------------------------------------: |
-| ![Hacker News rendered by Robin](docs/images/hackernews.png) | ![Wikipedia rendered by Robin](docs/images/wikipedia.png) | ![Google rendered by Robin](docs/images/google.png) |
+JavaScript, flexbox, and grid not supported. Many pages won’t look like they do in a production browser.
 
-_(These are rendered from the offline snapshots in [`assets/snapshots/`](assets/snapshots);
-regenerate them with [`scripts/render-demos.sh`](scripts/render-demos.sh). The
-Wikipedia shot is the article body - see [chapter 12](docs/12-limitations-and-next-steps.md)
-for why the nav stacks on top without `float` support.)_
+## Run it
 
-## What it does
-
-- Parses **real HTML** into a DOM - tolerant of the messy markup real sites ship
-- Parses **CSS** - selectors, the cascade, specificity, inheritance
-- Builds a **layout tree** - the box model, block + inline flow, text wrapping
-- **Paints** to a pixel buffer and saves a **PNG**, or opens a **scrollable window**
-- Rasterizes **anti-aliased text** with bundled fonts (no system fonts needed)
-- **Fetches** pages over HTTPS, from local files, or from bundled offline snapshots
-
-It is deliberately small and has real limits (no JavaScript, no flexbox/grid, no
-incremental layout). Those limits are the _point_ -
-see [`docs/12-limitations-and-next-steps.md`](docs/12-limitations-and-next-steps.md).
-
-## Quick start
-
-You need a recent Rust toolchain ([rustup.rs](https://rustup.rs)). Then:
+Install [Rust](https://rustup.rs) (1.88 or newer), then:
 
 ```bash
-# Open an empty browser window with an editable address bar
+# Open an empty browser window
 cargo run --release
 
-# Render a bundled snapshot of Hacker News to a PNG (no network needed)
+# Open a web page
+cargo run --release -- https://example.com
+
+# Open a bundled offline snapshot
+cargo run --release -- assets/snapshots/hackernews.html
+
+# Render a page to a PNG
 cargo run --release -- assets/snapshots/hackernews.html --png out/hn.png
-
-# Render a live page over HTTPS
-cargo run --release -- https://example.com --png out/example.png
-
-# Open a page in the window (the default output mode)
-cargo run --release -- assets/snapshots/wikipedia.html
 ```
 
-Handy flags: `--dump-dom` and `--dump-layout` print the tree at that stage,
-`--width <px>` sets the viewport width, and `--clip-top`/`--clip-height` crop the
-PNG to one band of a tall page. Run `cargo run -- --help` for all of them.
+In the address bar, enter a full `http://` or `https://` URL, a `file://` URL,
+or a local path, then press Enter to load it.
 
-In the address bar, enter an `http://` or `https://` URL, a `file://` URL,
-or a local path, then press Enter. Loading runs in the background; errors appear
-below the page, and successful navigation starts at the top of the new document.
+The window is the default output mode. Use `--dump-dom` or `--dump-layout` to
+inspect a page, `--width <px>` to set the viewport width, and `--clip-top` /
+`--clip-height` to crop PNG output. See `cargo run -- --help` for all options.
 
-## New to Rust? Start here
+## Project structure
 
-You do **not** need to be a Rust expert - this repo is a good way to _become_
-one. Here's the gentlest path:
+The engine and desktop interface are separate:
 
-1. **Install Rust** with [rustup.rs](https://rustup.rs) (one command). Check it
-   worked: `cargo --version`.
-2. **Run the tests:** `cargo test`. Everything should pass. You just compiled and
-   exercised a whole browser engine.
-3. **Read [Chapter 0](docs/00-how-to-use-this-repo.md)**, then
-   [Chapter 1: The DOM](docs/01-the-dom.md). The DOM module
-   ([`src/dom.rs`](src/dom.rs)) is ~150 lines and uses only basic Rust - it's
-   the friendliest place to begin.
-4. **Do the exercises** at the end of each chapter. Run one module's tests while
-   you work, e.g. `cargo test dom`.
+| Path                                                             | Responsibility                                     |
+| ---------------------------------------------------------------- | -------------------------------------------------- |
+| [`src/html.rs`](src/html.rs), [`src/dom.rs`](src/dom.rs)         | Parse HTML and represent the document tree.        |
+| [`src/css.rs`](src/css.rs), [`src/style.rs`](src/style.rs)       | Parse CSS and determine each element’s styles.     |
+| [`src/layout.rs`](src/layout.rs)                                 | Calculate boxes, positions, and text flow.         |
+| [`src/paint.rs`](src/paint.rs), [`src/render.rs`](src/render.rs) | Turn the layout into draw commands and pixels.     |
+| [`src/text.rs`](src/text.rs)                                     | Measure and rasterize text.                        |
+| [`src/net.rs`](src/net.rs)                                       | Load documents and stylesheets.                    |
+| [`src/browser.rs`](src/browser.rs)                               | Connect loading and rendering for the application. |
+| [`src/ui/`](src/ui/)                                             | Desktop window, address bar, and page display.     |
+| [`src/main.rs`](src/main.rs)                                     | CLI options and application startup.               |
 
-Every chapter has a **"Rust notes"** section that points out the Rust ideas
-(ownership, `enum`/`match`, `Option`, lifetimes, iterators) as you meet them in
-real code. If a concept is new, the official, free [_The Rust Programming
-Language_ book](https://doc.rust-lang.org/book/) explains each one well - keep it
-open in a tab. And if you're using a coding agent, just ask it to explain any
-line; this repo is set up to help it teach you (see below).
+The core DOM, HTML, CSS, style, and layout modules use the Rust standard library.
+Other stages use `fontdue` for fonts, `image` for PNG output, `ureq` and `url` for
+networking, and `eframe`/`egui` for the UI.
 
-## How it works
-
-Each box is one Rust module in [`src/`](src/), and the page flows through them
-top to bottom. Solid arrows carry the page's data from stage to stage; dotted
-arrows show the font engine, which layout uses to _measure_ text and paint uses
-to _draw_ it.
-
-```mermaid
-flowchart TD
-    URL["URL / file / snapshot"] --> NET["net.rs<br/><i>fetch bytes + linked CSS</i>"]
-
-    NET -->|HTML| HTML["html.rs<br/><i>tokenizer + tree builder</i>"]
-    HTML -->|DOM tree| DOM["dom.rs<br/><i>Node / Element / Text</i>"]
-    NET -->|"CSS (linked + inline)"| CSS["css.rs<br/><i>selectors + declarations</i>"]
-
-    DOM --> STYLE["style.rs<br/><i>the cascade + user-agent sheet</i>"]
-    CSS -->|Stylesheet| STYLE
-    STYLE -->|styled tree| LAYOUT["layout.rs<br/><i>box model + inline flow</i>"]
-
-    LAYOUT -->|box tree| PAINT["paint.rs<br/><i>display list</i>"]
-    PAINT -->|draw commands| RENDER["render.rs<br/><i>Canvas (software rasterizer)</i>"]
-
-    TEXT["text.rs<br/><i>font metrics + glyphs</i>"] -. measure .-> LAYOUT
-    TEXT -. draw glyphs .-> RENDER
-
-    RENDER -->|pixels| PNG["PNG file"]
-    RENDER -->|pixels| WIN["ui/<br/><i>egui desktop UI</i>"]
-```
-
-The CLI in [`src/main.rs`](src/main.rs) wires these together; the
-[chapters](docs/) below walk each module in this order.
-
-## Learn it commit by commit
-
-This repo's **git history is the tutorial**. Each commit adds exactly one idea,
-and each maps to a chapter in [`docs/`](docs/):
+## Development
 
 ```bash
-git log --oneline --reverse   # walk the whole pipeline, one concept at a time
+cargo test
+cargo clippy
+cargo fmt
 ```
 
-| #   | Chapter                                                           | Module                                                   |
-| --- | ----------------------------------------------------------------- | -------------------------------------------------------- |
-| 0   | [How to use this repo](docs/00-how-to-use-this-repo.md)           | -                                                        |
-| 1   | [The DOM](docs/01-the-dom.md)                                     | [`dom.rs`](src/dom.rs)                                   |
-| 2   | [The HTML parser](docs/02-html-parser.md)                         | [`html.rs`](src/html.rs)                                 |
-| 3   | [The CSS parser](docs/03-css-parser.md)                           | [`css.rs`](src/css.rs)                                   |
-| 4   | [Style & the cascade](docs/04-style-and-the-cascade.md)           | [`style.rs`](src/style.rs)                               |
-| 5   | [Block layout](docs/05-block-layout.md)                           | [`layout.rs`](src/layout.rs)                             |
-| 6   | [Painting](docs/06-painting.md)                                   | [`paint.rs`](src/paint.rs), [`render.rs`](src/render.rs) |
-| 7   | [Text rasterization](docs/07-text-rasterization.md)               | [`text.rs`](src/text.rs)                                 |
-| 8   | [Inline layout & text flow](docs/08-inline-layout-and-text.md)    | [`layout.rs`](src/layout.rs)                             |
-| 9   | [Networking](docs/09-networking.md)                               | [`net.rs`](src/net.rs)                                   |
-| 10  | [The interactive window](docs/10-interactive-window.md)           | [`ui/mod.rs`](src/ui/mod.rs)                             |
-| 11  | [Rendering real pages](docs/11-rendering-real-pages.md)           | (the messy-web fixes)                                    |
-| 12  | [Limitations & next steps](docs/12-limitations-and-next-steps.md) | -                                                        |
+The original tutorial chapters are kept in [`docs/`](docs/). They explain the
+engine’s foundations, but some details describe the upstream implementation and
+may differ from this fork. Offline sample pages live in
+[`assets/snapshots/`](assets/snapshots/).
 
-Every chapter ends with **exercises** that extend that stage - that's where the
-real learning happens. Run a single stage's tests with e.g. `cargo test layout`.
+## Credits and license
 
-## Built to learn _with an agent_
+Forked from [Addy Osmani’s Robin](https://github.com/addyosmani/rust-browser),
+which draws on [tensor-programming’s browser tutorial](https://github.com/tensor-programming/rust_browser_part_1)
+and Matt Brubeck’s [Let’s build a browser engine!](https://limpet.net/mbrubeck/2014/08/08/toy-layout-engine-1.html).
 
-Robin is **agent-first**. Point a coding agent (Claude Code, Cursor, …) at this
-repo and it has everything it needs to teach you, not just to dump answers:
-
-- [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md) - a codebase map, the
-  build/test commands, conventions, and explicit guidance to **coach** you
-- [`docs/`](docs/) - a chapter per stage, with graded exercises
-- A clean module-per-stage layout and per-module tests you can run one at a time
-
-A good first prompt: _"I'm learning Rust. Walk me through `src/dom.rs`, then give
-me exercise 1 from `docs/01-the-dom.md` and review my attempt."_
-
-## How it's built
-
-Pure standard library for the core stages (DOM, HTML, CSS, style, layout); each
-remaining stage adds exactly one focused crate, exactly when it's first needed:
-
-| Crate                                                                           | Used for                                       | First appears in |
-| ------------------------------------------------------------------------------- | ---------------------------------------------- | ---------------- |
-| [`image`](https://crates.io/crates/image)                                       | PNG output (codec only)                        | painting         |
-| [`fontdue`](https://crates.io/crates/fontdue)                                   | glyph rasterization                            | text             |
-| [`ureq`](https://crates.io/crates/ureq) + [`url`](https://crates.io/crates/url) | HTTPS fetch + URL resolution                   | networking       |
-| [`eframe / egui`](https://crates.io/crates/eframe)                              | desktop window, widgets, and page presentation | ui               |
-
-## License
-
-MIT for the code (see [`LICENSE`](LICENSE)); the bundled DejaVu fonts are under
-their own permissive license (see [`assets/fonts/FONT-LICENSE.txt`](assets/fonts/FONT-LICENSE.txt)).
-
-Inspired by [tensor-programming's original tutorial](https://github.com/tensor-programming/rust_browser_part_1)
-and Matt Brubeck's [robinson](https://limpet.net/mbrubeck/2014/08/08/toy-layout-engine-1.html).
+The code is licensed under [MIT](LICENSE). The bundled DejaVu fonts have their
+[own license](assets/fonts/FONT-LICENSE.txt).

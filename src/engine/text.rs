@@ -22,11 +22,11 @@ use crate::paint::TextRun;
 use crate::render::Canvas;
 
 // The fonts are embedded so the binary is self-contained.
-const SANS: &[u8] = include_bytes!("../assets/fonts/DejaVuSans.ttf");
-const SANS_BOLD: &[u8] = include_bytes!("../assets/fonts/DejaVuSans-Bold.ttf");
-const SANS_ITALIC: &[u8] = include_bytes!("../assets/fonts/DejaVuSans-Oblique.ttf");
-const SANS_BOLD_ITALIC: &[u8] = include_bytes!("../assets/fonts/DejaVuSans-BoldOblique.ttf");
-const MONO: &[u8] = include_bytes!("../assets/fonts/DejaVuSansMono.ttf");
+const SANS: &[u8] = include_bytes!("../../assets/fonts/DejaVuSans.ttf");
+const SANS_BOLD: &[u8] = include_bytes!("../../assets/fonts/DejaVuSans-Bold.ttf");
+const SANS_ITALIC: &[u8] = include_bytes!("../../assets/fonts/DejaVuSans-Oblique.ttf");
+const SANS_BOLD_ITALIC: &[u8] = include_bytes!("../../assets/fonts/DejaVuSans-BoldOblique.ttf");
+const MONO: &[u8] = include_bytes!("../../assets/fonts/DejaVuSansMono.ttf");
 
 /// The set of font faces Robin can draw with. Built once and shared (parsing a
 /// TTF isn't free), it picks the right face for a run's bold/italic/monospace

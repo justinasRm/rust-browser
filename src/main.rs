@@ -6,8 +6,8 @@
 
 use std::process::ExitCode;
 
+mod application_ui;
 mod browser;
-mod ui;
 
 use robin::{dom, html, layout, net, render};
 
@@ -101,7 +101,7 @@ fn main() -> ExitCode {
 }
 
 fn show_window(canvas: Option<render::Canvas>, width: f32, title: &str, address: &str) -> ExitCode {
-    match ui::show(canvas, width, title, address) {
+    match application_ui::show(canvas, width, title, address) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("robin: window error: {error}");
@@ -183,8 +183,9 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
     }
     Ok(Options {
         target,
-        width: width
-            .unwrap_or_else(|| ui::screen::get_screen_width().unwrap_or(DEFAULT_WIDTH) as f32),
+        width: width.unwrap_or_else(|| {
+            application_ui::screen::get_screen_width().unwrap_or(DEFAULT_WIDTH) as f32
+        }),
         clip_top,
         clip_height,
         mode,
