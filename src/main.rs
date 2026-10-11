@@ -8,6 +8,7 @@ use std::process::ExitCode;
 
 mod application_ui;
 mod browser;
+mod ffis;
 
 use robin::{dom, html, layout, net, render};
 
@@ -181,11 +182,16 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
     if target.is_none() && !matches!(mode, Mode::Window) {
         return Err("a URL or file is required for --png, --dump-dom, and --dump-layout".into());
     }
+
+    let width = width.unwrap_or_else(|| {
+        let (width, _) =
+            ffis::screen::get_window_dimensions().unwrap_or((DEFAULT_WIDTH as usize, 700));
+        width as f32
+    });
+
     Ok(Options {
         target,
-        width: width.unwrap_or_else(|| {
-            application_ui::screen::get_screen_width().unwrap_or(DEFAULT_WIDTH) as f32
-        }),
+        width,
         clip_top,
         clip_height,
         mode,

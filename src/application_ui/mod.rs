@@ -1,21 +1,19 @@
 //! Desktop UI. The engine hands us a Canvas; egui only presents its pixels.
 
 mod page_view;
-pub(crate) mod screen;
-
-use std::sync::mpsc::{self, Receiver, TryRecvError};
-
+use crate::ffis::screen;
 use eframe::egui;
 use robin::render::Canvas;
+use std::sync::mpsc::{self, Receiver, TryRecvError};
 
 use page_view::PageView;
 
 /// Open the browser, optionally displaying a completed page.
 pub fn show(canvas: Option<Canvas>, width: f32, title: &str, address: &str) -> Result<(), String> {
-    let height = screen::get_window_height().unwrap_or(700) as f32;
+    let (_, height) = screen::get_window_dimensions().unwrap_or((0, 700));
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([width, height])
+            .with_inner_size([width, height as f32])
             .with_resizable(false),
         renderer: eframe::Renderer::Glow,
         persist_window: false,

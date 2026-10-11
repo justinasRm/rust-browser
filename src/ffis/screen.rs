@@ -1,8 +1,8 @@
 //! Query the primary display before creating a window or laying out a page.
 
-/// Usable content height for a titled, non-resizable window.
+/// Usable window width and height for a non-resizable window, excluding dock and menu (macOS).
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-pub fn get_window_height() -> Option<usize> {
+pub fn get_window_dimensions() -> Option<(usize, usize)> {
     use std::ffi::{c_char, c_void};
 
     #[link(name = "AppKit", kind = "framework")]
@@ -48,23 +48,16 @@ pub fn get_window_height() -> Option<usize> {
             visible,
             1 | 2,
         );
-        Some(content.size.height.floor() as usize)
+        Some((
+            content.size.width.floor() as usize,
+            content.size.height.floor() as usize,
+        ))
     }
 }
 
 #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-pub fn get_window_height() -> Option<usize> {
+pub fn get_window_dimensions() -> Option<(usize, usize)> {
     None
-}
-
-/// Return the full width of the primary display.
-pub fn get_screen_width() -> Option<f64> {
-    let dims = platform_dimensions();
-    if dims.width.is_finite() && dims.width > 0.0 {
-        Some(dims.width)
-    } else {
-        None
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -89,23 +82,4 @@ struct Point {
 struct Rect {
     origin: Point,
     size: Size,
-}
-
-#[cfg(target_os = "macos")]
-fn platform_dimensions() -> Size {
-    #[link(name = "CoreGraphics", kind = "framework")]
-    extern "C" {
-        fn CGMainDisplayID() -> u32;
-        fn CGDisplayBounds(display: u32) -> Rect;
-    }
-
-    unsafe { CGDisplayBounds(CGMainDisplayID()).size }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn platform_dimensions() -> Size {
-    Size {
-        width: 0.0,
-        height: 0.0,
-    }
 }
