@@ -6,7 +6,7 @@
 
 use std::process::ExitCode;
 
-use robin::get_screen_dimensions;
+mod ui;
 
 use robin::css::Color;
 use robin::layout::{Dimensions, Rect};
@@ -117,7 +117,7 @@ fn main() -> ExitCode {
             // The window scrolls, so it always shows the full page.
             let canvas = paint_page(&layout_root, &fonts, opts.width);
             let title = format!("robin - {}", opts.target);
-            match robin::window::show(&canvas, &title) {
+            match ui::show(canvas, &title) {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(e) => {
                     eprintln!("robin: window error: {e}");
@@ -215,9 +215,8 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
     let mode = mode.unwrap_or_else(|| Mode::Png("out/page.png".to_string()));
     Ok(Options {
         target,
-        width: width.unwrap_or_else(|| {
-            get_screen_dimensions::get_screen_width().unwrap_or(DEFAULT_WIDTH) as f32
-        }),
+        width: width
+            .unwrap_or_else(|| ui::screen::get_screen_width().unwrap_or(DEFAULT_WIDTH) as f32),
         clip_top,
         clip_height,
         mode,

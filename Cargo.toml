@@ -2,7 +2,7 @@
 name = "robin"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.88"
 description = "A tiny web browser engine you build from scratch in Rust, one commit at a time."
 license = "MIT"
 repository = "https://github.com/addyosmani/rust-browser"
@@ -36,9 +36,8 @@ fontdue = "0.9"
 # live pages, plus URL parsing to resolve relative links like <link href>.
 ureq = { version = "2", features = ["tls", "gzip"] }
 url = "2"
-# Interactive window: open a real OS window and push our pixel buffer to it, with
-# keyboard/scroll input. A thin cross-platform framebuffer - no GUI toolkit.
-minifb = "0.27"
+# Application UI; the rendering engine does not import egui.
+eframe = { version = "0.33.3", default-features = false, features = ["default_fonts", "glow", "x11", "wayland"] }
 
 # Used only by `examples/make_gif.rs` to encode the demo animation.
 [dev-dependencies]

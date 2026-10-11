@@ -24,15 +24,14 @@
 //! ```
 //!
 //! Start reading at [`html`], then [`css`], [`style`], [`layout`] and
-//! [`paint`]. The [`net`] module fetches pages, and [`window`] shows them in a
-//! scrollable window.
+//! [`paint`]. The [`net`] module fetches pages. The application owns the
+//! desktop interface separately, in `src/ui/`.
 
 // Each stage of the pipeline lives in its own module. They are added to the
 // project one commit at a time; see `docs/` for the matching tutorial chapter.
 
 pub mod css;
 pub mod dom;
-pub mod get_screen_dimensions;
 pub mod html;
 pub mod layout;
 pub mod net;
@@ -40,7 +39,6 @@ pub mod paint;
 pub mod render;
 pub mod style;
 pub mod text;
-pub mod window;
 
 /// Crate version, surfaced in the CLI banner.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

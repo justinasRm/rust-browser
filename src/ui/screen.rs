@@ -1,7 +1,7 @@
 //! Query the primary display before creating a window or laying out a page.
 
 /// Usable content height for a titled, non-resizable window.
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub fn get_window_height() -> Option<usize> {
     use std::ffi::{c_char, c_void};
 
@@ -28,10 +28,7 @@ pub fn get_window_height() -> Option<usize> {
         let send: SendFunction = std::mem::transmute(function_address);
 
         let selector = |name: &[u8]| sel_registerName(name.as_ptr().cast());
-        let screens = send(
-            objc_getClass(b"NSScreen\0".as_ptr().cast()),
-            selector(b"screens\0"),
-        );
+        let screens = send(objc_getClass(c"NSScreen".as_ptr()), selector(b"screens\0"));
         let screen = send(screens, selector(b"firstObject\0"));
         if screen.is_null() {
             return None;
@@ -44,15 +41,20 @@ pub fn get_window_height() -> Option<usize> {
             std::mem::transmute(rect_entry);
 
         let visible = rect(screen, selector(b"visibleFrame\0"));
-        // Match minifb's titled, closable, non-resizable window.
+        // Reserve the title bar of a non-resizable window.
         let content = content_rect(
-            objc_getClass(b"NSWindow\0".as_ptr().cast()),
+            objc_getClass(c"NSWindow".as_ptr()),
             selector(b"contentRectForFrameRect:styleMask:\0"),
             visible,
             1 | 2,
         );
         Some(content.size.height.floor() as usize)
     }
+}
+
+#[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+pub fn get_window_height() -> Option<usize> {
+    None
 }
 
 /// Return the full width of the primary display.

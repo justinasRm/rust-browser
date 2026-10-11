@@ -66,7 +66,7 @@ impl Canvas {
         out
     }
 
-    /// The buffer as 0xRRGGBB `u32`s (the format `minifb` wants for the window).
+    /// The buffer as packed 0xRRGGBB pixels.
     pub fn to_argb_u32(&self) -> Vec<u32> {
         self.pixels
             .iter()

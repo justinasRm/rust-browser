@@ -112,7 +112,7 @@ flowchart TD
     TEXT -. draw glyphs .-> RENDER
 
     RENDER -->|pixels| PNG["PNG file"]
-    RENDER -->|pixels| WIN["window.rs<br/><i>scrollable window</i>"]
+    RENDER -->|pixels| WIN["ui/<br/><i>egui desktop UI</i>"]
 ```
 
 The CLI in [`src/main.rs`](src/main.rs) wires these together; the
@@ -139,7 +139,7 @@ git log --oneline --reverse   # walk the whole pipeline, one concept at a time
 | 7 | [Text rasterization](docs/07-text-rasterization.md) | [`text.rs`](src/text.rs) |
 | 8 | [Inline layout & text flow](docs/08-inline-layout-and-text.md) | [`layout.rs`](src/layout.rs) |
 | 9 | [Networking](docs/09-networking.md) | [`net.rs`](src/net.rs) |
-| 10 | [The interactive window](docs/10-interactive-window.md) | [`window.rs`](src/window.rs) |
+| 10 | [The interactive window](docs/10-interactive-window.md) | [`ui/mod.rs`](src/ui/mod.rs) |
 | 11 | [Rendering real pages](docs/11-rendering-real-pages.md) | (the messy-web fixes) |
 | 12 | [Limitations & next steps](docs/12-limitations-and-next-steps.md) | - |
 
@@ -169,7 +169,7 @@ remaining stage adds exactly one focused crate, exactly when it's first needed:
 | [`image`](https://crates.io/crates/image) | PNG output (codec only) | painting |
 | [`fontdue`](https://crates.io/crates/fontdue) | glyph rasterization | text |
 | [`ureq`](https://crates.io/crates/ureq) + [`url`](https://crates.io/crates/url) | HTTPS fetch + URL resolution | networking |
-| [`minifb`](https://crates.io/crates/minifb) | the interactive window | window |
+| [`eframe / egui`](https://crates.io/crates/eframe) | desktop window, widgets, and page presentation | ui |
 
 ## License
 
