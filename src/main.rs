@@ -6,16 +6,15 @@
 
 use std::process::ExitCode;
 
+mod browser;
 mod ui;
 
-use robin::css::Color;
-use robin::layout::{Dimensions, Rect};
-use robin::{css, dom, html, layout, net, paint, render, style};
+use robin::{dom, html, layout, net, render};
 
 const DEFAULT_WIDTH: f64 = 1000.0;
 
 struct Options {
-    target: String,
+    target: Option<String>,
     width: f32,
     clip_top: Option<f32>,
     clip_height: Option<f32>,
@@ -32,7 +31,7 @@ enum Mode {
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
-    if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
+    if args.iter().any(|a| a == "-h" || a == "--help") {
         print_usage();
         return ExitCode::SUCCESS;
     }
@@ -49,57 +48,31 @@ fn main() -> ExitCode {
         }
     };
 
-    let page = match net::load(&opts.target) {
+    let Some(target) = opts.target.as_deref() else {
+        return show_window(None, opts.width, "robin", "");
+    };
+
+    let page = match net::load(target) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("robin: could not load {}: {e}", opts.target);
+            eprintln!("robin: could not load {}: {e}", target);
             return ExitCode::FAILURE;
         }
     };
 
-    // The pipeline, stage by stage.
-    let dom = html::parse(&page.body);
     if let Mode::DumpDom = opts.mode {
+        let dom = html::parse(&page.body);
         print!("{}", dom::pretty_print(&dom));
         return ExitCode::SUCCESS;
     }
 
-    // Layout needs to measure text, so it needs the fonts too.
-    let fonts = match robin::text::Fonts::bundled() {
-        Ok(f) => f,
-        Err(e) => {
-            eprintln!("robin: could not load bundled fonts: {e}");
-            return ExitCode::FAILURE;
-        }
-    };
-
-    // Author CSS = linked stylesheets (fetched for http(s) pages) + inline
-    // <style> blocks. Later source wins ties, so inline goes last.
-    let mut css_text = String::new();
-    if let Some(base) = &page.base_url {
-        css_text.push_str(&net::fetch_linked_css(&dom, base));
-    }
-    css_text.push_str(&style::inline_css(&dom));
-    let author = css::parse(&css_text);
-    let styled = style::style_tree(&dom, &author);
-    let viewport = Dimensions {
-        content: Rect {
-            x: 0.0,
-            y: 0.0,
-            width: opts.width,
-            height: 0.0,
-        },
-        ..Default::default()
-    };
-    let layout_root = layout::layout_tree(&styled, viewport, &fonts);
-
-    match opts.mode {
+    let result = browser::with_layout(&page, opts.width, |layout_root, fonts| match opts.mode {
         Mode::DumpLayout => {
-            print!("{}", layout::box_tree_to_string(&layout_root));
+            print!("{}", layout::box_tree_to_string(layout_root));
             ExitCode::SUCCESS
         }
         Mode::Png(path) => {
-            let full = paint_page(&layout_root, &fonts, opts.width);
+            let full = browser::paint_page(layout_root, fonts, opts.width);
             let canvas = clip(full, opts.clip_top, opts.clip_height);
             ensure_parent_dir(&path);
             match canvas.save_png(&path) {
@@ -115,32 +88,26 @@ fn main() -> ExitCode {
         }
         Mode::Window => {
             // The window scrolls, so it always shows the full page.
-            let canvas = paint_page(&layout_root, &fonts, opts.width);
-            let title = format!("robin - {}", opts.target);
-            match ui::show(canvas, &title) {
-                Ok(()) => ExitCode::SUCCESS,
-                Err(e) => {
-                    eprintln!("robin: window error: {e}");
-                    ExitCode::FAILURE
-                }
-            }
+            let canvas = browser::paint_page(layout_root, fonts, opts.width);
+            let title = format!("robin - {target}");
+            show_window(Some(canvas), opts.width, &title, target)
         }
         Mode::DumpDom => unreachable!(),
-    }
+    });
+    result.unwrap_or_else(|error| {
+        eprintln!("robin: {error}");
+        ExitCode::FAILURE
+    })
 }
 
-/// Paint the laid-out page into a (possibly very tall) full-height canvas.
-fn paint_page(
-    layout_root: &layout::LayoutBox,
-    fonts: &robin::text::Fonts,
-    width: f32,
-) -> render::Canvas {
-    let height = layout_root.dimensions.margin_box().height.ceil().max(1.0);
-    let mut canvas =
-        render::Canvas::new(width as usize, height as usize, Color::rgb(255, 255, 255));
-    let display_list = paint::build_display_list(layout_root);
-    paint::paint_list(&mut canvas, &display_list, fonts);
-    canvas
+fn show_window(canvas: Option<render::Canvas>, width: f32, title: &str, address: &str) -> ExitCode {
+    match ui::show(canvas, width, title, address) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("robin: window error: {error}");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// Crop the canvas to the `--clip-top` / `--clip-height` window, if given. Lets
@@ -210,9 +177,10 @@ fn parse_args(args: &[String]) -> Result<Options, String> {
         }
         i += 1;
     }
-    let target = target.ok_or("no URL or file given")?;
-    // Default to a PNG next to the target if no mode was chosen.
-    let mode = mode.unwrap_or_else(|| Mode::Png("out/page.png".to_string()));
+    let mode = mode.unwrap_or(Mode::Window);
+    if target.is_none() && !matches!(mode, Mode::Window) {
+        return Err("a URL or file is required for --png, --dump-dom, and --dump-layout".into());
+    }
     Ok(Options {
         target,
         width: width
@@ -228,11 +196,11 @@ fn print_usage() {
         "robin {} - a tiny browser engine you build from scratch\n\
          \n\
          USAGE:\n    \
-             robin <URL|FILE> [options]\n\
+             robin [URL|FILE] [options]\n\
          \n\
          OPTIONS:\n    \
-             --window         Open an interactive, scrollable window\n    \
-             --png <FILE>     Render the page to a PNG (default: out/page.png)\n    \
+             --window         Open an interactive window (default)\n    \
+             --png <FILE>     Render the page to a PNG\n    \
              --width <PX>     Viewport width (default: screen width, fallback {})\n    \
              --clip-top <PX>  Skip the top PX pixels when saving (scroll offset)\n    \
              --clip-height <PX>  Cap the rendered height (for thumbnails)\n    \
@@ -241,10 +209,65 @@ fn print_usage() {
              -h, --help       Show this help\n    \
              -V, --version    Show the version\n\
          \n\
-         <URL|FILE> may be an https:// URL, a file:// URL, or a local path.\n\
+         Without a URL or file, opens an empty window.\n\
+         <URL|FILE> may be an http(s):// URL, a file:// URL, or a local path.\n\
          In the window: arrows/j/k scroll, Space/PageDn page, Home/End jump,\n\
          q or Esc quits. See docs/ for the matching chapters.",
         robin::VERSION,
         DEFAULT_WIDTH as u32
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(arguments: &[&str]) -> Result<Options, String> {
+        parse_args(
+            &arguments
+                .iter()
+                .map(|arg| arg.to_string())
+                .collect::<Vec<_>>(),
+        )
+    }
+
+    #[test]
+    fn empty_launch_defaults_to_window() {
+        let options = parse(&[]).unwrap();
+        assert!(options.target.is_none());
+        assert!(matches!(options.mode, Mode::Window));
+        let options = parse(&["--window", "--width", "640"]).unwrap();
+        assert!(options.target.is_none());
+        assert_eq!(options.width, 640.0);
+    }
+
+    #[test]
+    fn target_alone_opens_window() {
+        for target in ["https://example.com", "http://example.com", "page.html"] {
+            let options = parse(&[target]).unwrap();
+            assert_eq!(options.target.as_deref(), Some(target));
+            assert!(matches!(options.mode, Mode::Window));
+        }
+    }
+
+    #[test]
+    fn non_window_modes_require_target_and_remain_explicit() {
+        for arguments in [
+            vec!["--png", "out.png"],
+            vec!["--dump-dom"],
+            vec!["--dump-layout"],
+        ] {
+            assert!(parse(&arguments).is_err());
+        }
+        let options = parse(&["page.html", "--png", "out.png"]).unwrap();
+        assert!(matches!(options.mode, Mode::Png(path) if path == "out.png"));
+        assert!(matches!(
+            parse(&["page.html", "--dump-dom"]).unwrap().mode,
+            Mode::DumpDom
+        ));
+        assert!(matches!(
+            parse(&["page.html", "--dump-layout"]).unwrap().mode,
+            Mode::DumpLayout
+        ));
+    }
 }

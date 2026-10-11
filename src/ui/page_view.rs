@@ -8,6 +8,7 @@ pub(super) struct PageView {
     texture: Option<TextureHandle>,
     uploaded: Option<PixelRegion>,
     scroll_y: f32,
+    reset_scroll: bool,
 }
 
 impl PageView {
@@ -17,6 +18,7 @@ impl PageView {
             texture: None,
             uploaded: None,
             scroll_y: 0.0,
+            reset_scroll: true,
         }
     }
 
@@ -24,6 +26,10 @@ impl PageView {
         let viewport_height = ui.available_height();
         let max_scroll = (self.canvas.height as f32 - viewport_height).max(0.0);
         let mut area = egui::ScrollArea::both().auto_shrink([false, false]);
+        if self.reset_scroll {
+            area = area.scroll_offset(egui::Vec2::ZERO);
+            self.reset_scroll = false;
+        }
         if !ui.ctx().wants_keyboard_input() {
             if let Some(offset) = keyboard_scroll(ui, self.scroll_y, max_scroll, viewport_height) {
                 area = area.vertical_scroll_offset(offset);
@@ -167,6 +173,14 @@ mod tests {
         frame(None);
         assert!(frame(Some(Key::End)) > 19_000.0);
         assert_eq!(frame(Some(Key::Home)), 0.0);
+        assert!(frame(Some(Key::End)) > 19_000.0);
+
+        // A newly loaded document must not inherit egui's old scroll state.
+        page = PageView::new(Canvas::new(200, 1_000, Color::rgb(255, 255, 255)));
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| page.show(ui));
+        });
+        assert_eq!(page.scroll_y, 0.0);
     }
 
     #[test]
